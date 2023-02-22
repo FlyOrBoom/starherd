@@ -1,0 +1,80 @@
+<html>
+  <body>
+    <canvas id="hr"></canvas>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+const canvas = document.getElementById('hr')
+
+const abs_mag_to_sol_lum = M => Math.pow(100, -M/5)
+const bv_to_temp = i => 4600 * (1/(0.92*i + 1.7) + 1/(0.92*i + 0.62))
+
+let min_bv = 0
+let max_bv = +3
+
+let min_lum = +10
+let max_lum = -10
+
+const display = true
+
+const bubble_config = {
+  count: 7,
+  rmin: 5,
+  rmax: 15,
+  min: 0,
+  max: 100
+}
+
+new Chart(canvas, {
+  type: 'bubble',
+  data: {
+    datasets: [{
+      label: 'Data',
+      data: [
+        { x: 0, y: 0, r: 10 }
+      ],
+      borderWidth: 1
+    }]
+  },
+  options: {
+    scales: {
+      x: {
+        type: 'linear',
+        title: { display, text: 'Blue light versus visible light (B−V index)' },
+        position: 'bottom',
+        min: min_bv,
+        max: max_bv,
+        grid: { drawOnChartArea: true },
+      },
+      x1: {
+        type: 'linear',
+        title: { display, text: 'Surface temperature (Kelvins)' },
+        position: 'top',
+        min: bv_to_temp(max_bv),
+        max: bv_to_temp(min_bv),
+        reverse: true,
+        grid: { drawOnChartArea: false },
+      },
+      y: {
+        type: 'linear',
+        title: { display, text: 'Luminosity in Suns (L⊙)' },
+        position: 'left',
+        min: max_lum,
+        max: min_lum,
+        reverse: true,
+        grid: { drawOnChartArea: true },
+      },
+      y1: {
+        type: 'logarithmic',
+        title: { display, text: 'Hipparchus’s scale (Absolute magnitude)' },
+        display: true,
+        position: 'right',
+        min: abs_mag_to_sol_lum(min_lum),
+        max: abs_mag_to_sol_lum(max_lum),
+        grid: { drawOnChartArea: false },
+      },
+    }
+  }
+})
+    </script>
+  </body>
+</html>
