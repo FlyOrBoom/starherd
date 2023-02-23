@@ -16,23 +16,69 @@ html, body {
     <script>
 const canvas = document.getElementById('hr')
 
+// Math
+const random_range = (a, b) => a + (b - a) * Math.random()
+const in_range = (a, x, b) => (a <= x) && (x <= b)
+const log10 = (x) => Math.log(x)/Math.log(10)
+
+// Conversions
 const abs_mag_to_sol_lum = M => Math.pow(100, -M/5)
 const bv_to_temp = i => 4600 * (1/(0.92*i + 1.7) + 1/(0.92*i + 0.62))
 
-const in_range = (a, x, b) => (a <= x) && (x <= b)
-
-const initial_mass_function = M => {
+// Probability density function of stars' initial masses
+const initial_mass_function = M => (
   in_range(0.08, M, 0.50) ? 0.035 * Math.pow(M, -1.3)
   : in_range (0.50, M, 1.00) ? 0.019 * Math.pow(M, -2.2)
   : in_range (1.00, M, 100) ? 0.019 * Math.pow(M, -2.7)
-  : NaN
+  : 0
+)
+
+// Zeta function of metallicity Z
+const phases = {
+  MS_convective: {
+    name: "Main Sequence"
+  }
 }
+const ζ = Z => log10(Z)
+
+const data = {
+  Tout1996_1: {
+    a: [+0.39704170, +8.52762600,+0.00025546, +5.43288900, +5.56357900,+0.78866060,+0.00586685],
+    b: [-0.32913574,-24.41225973,-0.00123461, -8.62157806,-10.32345224,-2.90870942,-0.01704237],
+    c: [+0.34776688,+56.43597107,-0.00023246,+13.44202049,+19.44322980,+6.54713531,+0.03872348],
+    e: [+0.37470851,+37.06152575,+0.00045519,+14.51584135,+18.97361347,+4.05606657,+0.02570041],
+    f: [+0.09011915, +5.45624060,+0.00016176, +3.39793084, +4.16903097,+0.53287322,+0.00383376],
+  },
+  Tout1996_2: {
+    a: [+1.71535900, +6.59778800,+10.08855000,+1.01249500,0.07490166,+0.01077422,+3.08223400,+17.84778000,+0.00022582],
+    b: [+0.62246212, -0.42450044, -7.11727086,+0.32699690,0.02410413, 0.00000000,+0.94472050, -7.45345690,-0.00186899],
+    c: [-0.92557761,-12.13339427,-31.67119479,-0.00923418,0.07233664, 0.00000000,-2.15200882,-48.96066856,+0.00388783],
+    d: [-1.16996966,-10.73509484,-24.24848322,-0.03876858,0.03040467, 0.00000000,-2.49219496,-40.05386135,+0.00142402],
+    e: [-0.30631491, -2.51487077, -5.33608972,-0.00412750,0.00197741, 0.00000000,-0.63848738, -9.09331816,-0.00007671],
+  },
+}
+const L_ZAMS = (M, Z) => {
+  const ζ_ZAMS = ζ(Z)
+  let co = Object.fromEntries(
+    "αβγδεζη".split("").map((greek, i) => ([ 
+      greek, 
+      Object.values(data.Tout1996_1)
+      .reduce((a, b, j) => a + b[i]*(ζ_ZAMS**j), 0)
+    ]))
+  )
+  return (co.α * (M**5.5) + co.β * (M**11))
+  / (co.γ + (M**3) + co.δ * (M**5) + co.ε * (M**7) + co.ζ * (M**8) + co.η * (M**9.5))
+}
+console.log(L_ZAMS(1,0.2))
 
 let min_bv = 0
 let max_bv = +3
 
 let min_mag = +10
 let max_mag = -10
+
+let min_mass = 0.08
+let max_mass = 100
 
 const display = true
 
@@ -48,16 +94,26 @@ const bubble_config = {
 const stars = {
   test: { x: 0, y: 0, r: 10 }
 }
-for(let i = 0; i < 100; i++){
+
+const masses = {}
+for(let i = 0; i < 1000; i++){
+  const mass = random_range(min_mass, max_mass)
+  
+  // Reject unlikely masses
+  const test_mass = random_range(min_mass, max_mass)
+  if(initial_mass_function(mass) < initial_mass_function(test_mass)) continue
+  
+  
   stars[i] = {
     x: Math.random()*(max_bv-min_bv) + min_bv,
     y: Math.random()*(max_mag-min_mag) + min_mag,
-    r: Math.random()*20
+    r: mass/10
   }
 }
 
 Chart.defaults.color = '#ccc'
 Chart.defaults.borderColor = '#444'
+Chart.defaults.maintainAspectRatio = false
 
 new Chart(canvas, {
   type: 'bubble',
@@ -89,8 +145,8 @@ new Chart(canvas, {
       },
       y: {
         type: 'linear',
-        title: { display, text: 'Luminosity in Suns (L⊙)' },
         position: 'left',
+        title: { display, text: 'Hipparchus’s scale (Absolute magnitude)' },
         min: max_mag,
         max: min_mag,
         reverse: true,
@@ -98,7 +154,7 @@ new Chart(canvas, {
       },
       y1: {
         type: 'logarithmic',
-        title: { display, text: 'Hipparchus’s scale (Absolute magnitude)' },
+        title: { display, text: 'Luminosity in Suns (L⊙)' },
         display: true,
         position: 'right',
         min: abs_mag_to_sol_lum(min_mag),
