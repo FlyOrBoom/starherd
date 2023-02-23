@@ -29,14 +29,19 @@ const L_sun = 3.86e+26 // watts
 const R_sun = 6.9634e+8 // meters
 
 // Conversions
-const abs_mag_to_sol_lum = M => 
+const abs_mag_to_sol_lum = (M) => 
   Math.pow(100, -M/5)
   
-const bv_to_temp = i => 
+const bv_to_temp = (i) => 
   4600 * (1/(0.92*i + 1.7) + 1/(0.92*i + 0.62))
   
 const sol_radius_and_sol_lum_to_temp = (R, L) => 
   ( L*L_sun / ((4*PI*R*R*R_sun*R_sun) * STEFAN) ) ** (1/4)
+  
+const temp_to_col = (T) => {
+  const blackbody = [{temp:1000,col:"#ff3800"},{temp:1200,col:"#ff5300"},{temp:1400,col:"#ff6500"},{temp:1600,col:"#ff7300"},{temp:1800,col:"#ff7e00"},{temp:2000,col:"#ff8912"},{temp:2200,col:"#ff932c"},{temp:2400,col:"#ff9d3f"},{temp:2600,col:"#ffa54f"},{temp:2800,col:"#ffad5e"},{temp:3000,col:"#ffb46b"},{temp:3200,col:"#ffbb78"},{temp:3400,col:"#ffc184"},{temp:3600,col:"#ffc78f"},{temp:3800,col:"#ffcc99"},{temp:4000,col:"#ffd1a3"},{temp:4200,col:"#ffd5ad"},{temp:4400,col:"#ffd9b6"},{temp:4600,col:"#ffddbe"},{temp:4800,col:"#ffe1c6"},{temp:5000,col:"#ffe4ce"},{temp:5200,col:"#ffe8d5"},{temp:5400,col:"#ffebdc"},{temp:5600,col:"#ffeee3"},{temp:5800,col:"#fff0e9"},{temp:6000,col:"#fff3ef"},{temp:6200,col:"#fff5f5"},{temp:6400,col:"#fff8fb"},{temp:6600,col:"#fef9ff"},{temp:6800,col:"#f9f6ff"},{temp:7000,col:"#f5f3ff"},{temp:7200,col:"#f0f1ff"},{temp:7400,col:"#edefff"},{temp:7600,col:"#e9edff"},{temp:7800,col:"#e6ebff"},{temp:8000,col:"#e3e9ff"},{temp:8200,col:"#e0e7ff"},{temp:8400,col:"#dde6ff"},{temp:8600,col:"#dae4ff"},{temp:8800,col:"#d8e3ff"},{temp:9000,col:"#d6e1ff"},{temp:9200,col:"#d3e0ff"},{temp:9400,col:"#d1dfff"},{temp:9600,col:"#cfddff"},{temp:9800,col:"#cedcff"},{temp:10000,col:"#ccdbff"},{temp:10200,col:"#cadaff"},{temp:10400,col:"#c9d9ff"},{temp:10600,col:"#c7d8ff"},{temp:10800,col:"#c6d8ff"},{temp:11000,col:"#c4d7ff"},{temp:11200,col:"#c3d6ff"},{temp:11400,col:"#c2d5ff"},{temp:11600,col:"#c1d4ff"},{temp:11800,col:"#c0d4ff"},{temp:12000,col:"#bfd3ff"},{temp:12200,col:"#bed2ff"},{temp:12400,col:"#bdd2ff"},{temp:12600,col:"#bcd1ff"},{temp:12800,col:"#bbd1ff"},{temp:13000,col:"#bad0ff"},{temp:13200,col:"#b9d0ff"},{temp:13400,col:"#b8cfff"},{temp:13600,col:"#b7cfff"},{temp:13800,col:"#b7ceff"},{temp:14000,col:"#b6ceff"},{temp:14200,col:"#b5cdff"},{temp:14400,col:"#b5cdff"},{temp:14600,col:"#b4ccff"},{temp:14800,col:"#b3ccff"},{temp:15000,col:"#b3ccff"},{temp:15200,col:"#b2cbff"},{temp:15400,col:"#b2cbff"},{temp:15600,col:"#b1caff"},{temp:15800,col:"#b1caff"},{temp:16000,col:"#b0caff"},{temp:16200,col:"#afc9ff"},{temp:16400,col:"#afc9ff"},{temp:16600,col:"#afc9ff"},{temp:16800,col:"#aec9ff"},{temp:17000,col:"#aec8ff"},{temp:17200,col:"#adc8ff"},{temp:17400,col:"#adc8ff"},{temp:17600,col:"#acc7ff"},{temp:17800,col:"#acc7ff"},{temp:18000,col:"#acc7ff"},{temp:18200,col:"#abc7ff"},{temp:18400,col:"#abc6ff"},{temp:18600,col:"#aac6ff"},{temp:18800,col:"#aac6ff"},{temp:19000,col:"#aac6ff"},{temp:19200,col:"#a9c6ff"},{temp:19400,col:"#a9c5ff"},{temp:19600,col:"#a9c5ff"},{temp:19800,col:"#a9c5ff"},{temp:20000,col:"#a8c5ff"},{temp:20200,col:"#a8c5ff"},{temp:20400,col:"#a8c4ff"},{temp:20600,col:"#a7c4ff"},{temp:20800,col:"#a7c4ff"},{temp:21000,col:"#a7c4ff"},{temp:21200,col:"#a7c4ff"},{temp:21400,col:"#a6c3ff"},{temp:21600,col:"#a6c3ff"},{temp:21800,col:"#a6c3ff"},{temp:22000,col:"#a6c3ff"},{temp:22200,col:"#a5c3ff"},{temp:22400,col:"#a5c3ff"},{temp:22600,col:"#a5c3ff"},{temp:22800,col:"#a5c2ff"},{temp:23000,col:"#a4c2ff"},{temp:23200,col:"#a4c2ff"},{temp:23400,col:"#a4c2ff"},{temp:23600,col:"#a4c2ff"},{temp:23800,col:"#a4c2ff"},{temp:24000,col:"#a3c2ff"},{temp:24200,col:"#a3c1ff"},{temp:24400,col:"#a3c1ff"},{temp:24600,col:"#a3c1ff"},{temp:24800,col:"#a3c1ff"},{temp:25000,col:"#a3c1ff"},{temp:25200,col:"#a2c1ff"},{temp:25400,col:"#a2c1ff"},{temp:25600,col:"#a2c1ff"},{temp:25800,col:"#a2c1ff"},{temp:26000,col:"#a2c0ff"},{temp:26200,col:"#a2c0ff"},{temp:26400,col:"#a1c0ff"},{temp:26600,col:"#a1c0ff"},{temp:26800,col:"#a1c0ff"},{temp:27000,col:"#a1c0ff"},{temp:27200,col:"#a1c0ff"},{temp:27400,col:"#a1c0ff"},{temp:27600,col:"#a1c0ff"},{temp:27800,col:"#a0c0ff"},{temp:28000,col:"#a0bfff"},{temp:28200,col:"#a0bfff"},{temp:28400,col:"#a0bfff"},{temp:28600,col:"#a0bfff"},{temp:28800,col:"#a0bfff"},{temp:29000,col:"#a0bfff"},{temp:29200,col:"#a0bfff"},{temp:29400,col:"#9fbfff"},{temp:29600,col:"#9fbfff"},{temp:29800,col:"#9fbfff"}]
+  return blackbody.find(({temp})=> temp > T).col
+}
 
 // Probability density function of stars' initial masses
 const initial_mass_function = M => (
@@ -105,7 +110,7 @@ let min_temp = bv_to_temp(min_bv), max_temp = bv_to_temp(max_bv)
 let min_mag = +10, max_mag = -10
 let min_sol_lum = abs_mag_to_sol_lum(min_mag), max_sol_lum = abs_mag_to_sol_lum(max_mag)
 
-let min_mass = 0.08, max_mass = 100
+let min_mass = 0.1, max_mass = 10
 
 const display = true
 
@@ -134,10 +139,13 @@ for(let i = 0; i < 1000; i++){
   const ζ = log10(Z)
   const R = R_ZAMS(mass, ζ)
   const L = L_ZAMS(mass, ζ)
+  const T = sol_radius_and_sol_lum_to_temp(R, L)
+  const color = temp_to_col(T)
   stars[i] = {
-    x: sol_radius_and_sol_lum_to_temp(R, L),
+    x: T,
     y: L,
-    r: mass
+    r: R*10,
+    color: color,
   }
 }
 
@@ -151,6 +159,7 @@ new Chart(canvas, {
     datasets: [{
       label: 'Stars',
       data: Object.values(stars),
+      backgroundColor: Object.values(stars).map(s=>s.color),
       borderWidth: 1
     }]
   },
