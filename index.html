@@ -1,6 +1,14 @@
 <html>
   <head>
     <title>Starherd</title>
+    <style>
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: #222;
+}
+    </style>
   </head>
   <body>
     <canvas id="hr"></canvas>
@@ -11,11 +19,20 @@ const canvas = document.getElementById('hr')
 const abs_mag_to_sol_lum = M => Math.pow(100, -M/5)
 const bv_to_temp = i => 4600 * (1/(0.92*i + 1.7) + 1/(0.92*i + 0.62))
 
+const in_range = (a, x, b) => (a <= x) && (x <= b)
+
+const initial_mass_function = M => {
+  in_range(0.08, M, 0.50) ? 0.035 * Math.pow(M, -1.3)
+  : in_range (0.50, M, 1.00) ? 0.019 * Math.pow(M, -2.2)
+  : in_range (1.00, M, 100) ? 0.019 * Math.pow(M, -2.7)
+  : NaN
+}
+
 let min_bv = 0
 let max_bv = +3
 
-let min_lum = +10
-let max_lum = -10
+let min_mag = +10
+let max_mag = -10
 
 const display = true
 
@@ -27,19 +44,20 @@ const bubble_config = {
   max: 100
 }
 
-Chart.defaults.color = '#ccc'
-Chart.defaults.borderColor = '#444'
 
 const stars = {
   test: { x: 0, y: 0, r: 10 }
 }
 for(let i = 0; i < 100; i++){
   stars[i] = {
-    x: Math.random(),
-    y: Math.random()*10-5,
+    x: Math.random()*(max_bv-min_bv) + min_bv,
+    y: Math.random()*(max_mag-min_mag) + min_mag,
     r: Math.random()*20
   }
 }
+
+Chart.defaults.color = '#ccc'
+Chart.defaults.borderColor = '#444'
 
 new Chart(canvas, {
   type: 'bubble',
@@ -73,8 +91,8 @@ new Chart(canvas, {
         type: 'linear',
         title: { display, text: 'Luminosity in Suns (L⊙)' },
         position: 'left',
-        min: max_lum,
-        max: min_lum,
+        min: max_mag,
+        max: min_mag,
         reverse: true,
         grid: { drawOnChartArea: true },
       },
@@ -83,14 +101,13 @@ new Chart(canvas, {
         title: { display, text: 'Hipparchus’s scale (Absolute magnitude)' },
         display: true,
         position: 'right',
-        min: abs_mag_to_sol_lum(min_lum),
-        max: abs_mag_to_sol_lum(max_lum),
+        min: abs_mag_to_sol_lum(min_mag),
+        max: abs_mag_to_sol_lum(max_mag),
         grid: { drawOnChartArea: false },
       },
     }
   }
 })
-
     </script>
   </body>
 </html>
