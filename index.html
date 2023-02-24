@@ -17,8 +17,7 @@ html, body {
     <p> A stellar evolution visualizer by Xing, based on "Comprehensive analytic formulae for stellar evolution as a function of mass and metallicity" by Hurley, Pols &amp; Tout, and "Zero-age main-seqence radii and luminosities as analytic functions of mass and metallicity" by Eggleton, Fitchett &amp; Tout.</p>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-      
-"use strict"
+ "use strict"
 
 const canvas = document.getElementById('hr')
 
@@ -82,7 +81,17 @@ const phases = {
 }
 
 const polynomial = coefficients => x => 
-  coefficients.reduce((sum, coefficient, degree) => sum + coefficient * (x**degree), 0)
+  coefficients.reduce((sum, coefficient, degree) => 
+    sum + coefficient * (x**degree)
+  , 0)
+
+const rational = (...pairs) => x =>
+  pairs.reduce((sum, [coefficient, exponent]) => 
+    sum + coefficient * (x ** exponent)
+  , 0)
+
+const fit = (...numerator) => (...denominator) => x =>
+  rational(...numerator)(x) / rational(...denominator)(x)
 
 let min_bv = -0.5, max_bv = +3
 let min_temp = bv_to_temp(min_bv), max_temp = bv_to_temp(max_bv)
@@ -110,50 +119,13 @@ const star_to_bubble = ({T,L,R}) => ({
   r: R*2
 })
 
+
 const star_init = (id, M, Z) => {
   const $ = { id, M, Z }
   
   $.ζ = log10(Z)
   
-  // the initial mass above which a hook appears in the main-sequence
-  $.M_hook = 1.0185 + 0.16015*$.ζ + 0.0892*$.ζ*$.ζ
-  
-  // the maximum initial mass for which He ignites degenerately in a helium flash
-  $.M_HeF = 1.995 + 0.25*$.ζ + 0.087*$.ζ*$.ζ
-  
-  // the maximum initial mass for which He ignites on the first giant branch
-  $.M_FGB = 13.048 * (($.Z/0.02)**0.06) / (1 + 0.0012*((0.02/$.Z)**1.27))
-  
-  // where the mass of the convective envelope MCE first exceeds a set fraction of the envelope mass ME
-  $.ratio_CE_E = (M < $.M_HeF) ? (2/5) : (1/3)
-  
-  {
-    const coefficients = [
-      [1.593890, 2.053038, 1.231226, 2.327785, 0],
-      [2.706708, 1.483131, 5.772723, 7.411230, 0],
-      [1.466143, -1.048442, -6.795374, -1.391127, 0],
-      [4.141960, 4.564888, 2.958542, 5.571483, 0],
-      [3.426349, 0,0,0,0]
-    ]
-    const p = n => polynomial(coefficients[n])($.ζ)
-    const [ a1, a2, a3, a4, a5 ] = int_range(5).map(p)
-    $.t_BGB = (a1 + a2*(M**4) + a3*(M**5.5) + (M**7)) / (a4*(M**2) + a5*(M**7))
-  }
-  
-  {
-    const coefficients = [
-      [1.949814, 1.758178, -6.008212, -4.470533],
-      [4.903830, 0, 0, 0],
-      [5.212154, 3.166411, -2.750074, -2.271549],
-      [1.312179, -3.294936, 9.231860, 2.610989],
-      [8.073972, 0, 0, 0],
-    ]
-    const p = n => polynomial(coefficients[n])($.ζ)
-    const [ a6, a7, a8, a9, a10 ] = int_range(5).map(p)
-    const µ = max(0.5, 1 - 0.01 * max(a6 / (M**a7), a8 + a9/(M**a10)))
-    const x = max(0.95, min(0.95 - 0.03*($.ζ + 0.30103), 0.99))
-    $.t_MS = max(µ * $.t_BGB, x * $.t_BGB)
-  }
+  // Zero-age main sequence mass and radius
   
   {
     const coefficients = [
@@ -186,10 +158,75 @@ const star_init = (id, M, Z) => {
     ]
     const p = n => polynomial(coefficients[n])($.ζ)
     const [ a1, a2, a3, a4, a5, a6, a7 ] = int_range(7).map(p)
-    const L = ( a1*(M**5.5) + a2*(M**11)) / ( a3 + (M**3) + a4*(M**5) + a5*(M**7) + a6*(M**8) + a7*(M**9.5) )
-    $.L_ZAMS = L
+    $.L_ZAMS = fit
+    ([a1, 5.5], [a2, 11])
+    ([a3, 0], [1, 3], [a4, 5], [a5, 7], [a6, 8], [a7, 9.5])
+    (M)
   }
   
+  
+  // the initial mass above which a hook appears in the main-sequence
+  $.M_hook = 1.0185 + 0.16015*$.ζ + 0.0892*$.ζ*$.ζ
+  
+  // the maximum initial mass for which He ignites degenerately in a helium flash
+  $.M_HeF = 1.995 + 0.25*$.ζ + 0.087*$.ζ*$.ζ
+  
+  // the maximum initial mass for which He ignites on the first giant branch
+  $.M_FGB = 13.048 * (($.Z/0.02)**0.06) / (1 + 0.0012*((0.02/$.Z)**1.27))
+  
+  // where the mass of the convective envelope MCE first exceeds a set fraction of the envelope mass ME
+  $.ratio_CE_E = (M < $.M_HeF) ? (2/5) : (1/3)
+  
+  {
+    const coefficients = [
+      [1.593890, 2.053038, 1.231226, 2.327785, 0],
+      [2.706708, 1.483131, 5.772723, 7.411230, 0],
+      [1.466143, -1.048442, -6.795374, -1.391127, 0],
+      [4.141960, 4.564888, 2.958542, 5.571483, 0],
+      [3.426349, 0,0,0,0]
+    ]
+    const p = n => polynomial(coefficients[n])($.ζ)
+    const [ a1, a2, a3, a4, a5 ] = int_range(5).map(p)
+    $.t_BGB = $.t_HeI = fit
+    ([a1, 0], [a2, 4], [a3, 5.5], [1, 7])
+    ([a4, 2], [a5, 7])
+    (M)
+  }
+  
+  {
+    const coefficients = [
+      [1.949814, 1.758178, -6.008212, -4.470533],
+      [4.903830, 0, 0, 0],
+      [5.212154, 3.166411, -2.750074, -2.271549],
+      [1.312179, -3.294936, 9.231860, 2.610989],
+      [8.073972, 0, 0, 0],
+    ]
+    const p = n => polynomial(coefficients[n])($.ζ)
+    const [ a6, a7, a8, a9, a10 ] = int_range(5).map(p)
+    const µ = max(0.5, 1 - 0.01 * max(a6 / (M**a7), a8 + a9/(M**a10)))
+    const x = max(0.95, min(0.95 - 0.03*($.ζ + 0.30103), 0.99))
+    $.t_MS = max(µ * $.t_BGB, x * $.t_BGB)
+  }
+  
+  {
+    const coefficients = [
+      [1.031538, -2.434480, 7.732821, 6.460705, 1.374484],
+      [1.043715, -1.577474, -5.168234, -5.596506, -1.299394],
+      [7.859573, -8.542048, -2.642511, -9.585707],
+      [3.858911, 2.459681, -7.630093, -3.486057, -4.861703],
+      [2.888720, 2.952979, 1.850341, 3.797254],
+      [7.196580, 5.613746, 3.805871, 8.398728],
+    ]
+    const p = n => polynomial(coefficients[n])($.ζ)
+    const [ _a11, _a12, a13, a14, a15, a16 ] = int_range(6).map(p)
+    const a11 = _a11 * a14
+    const a12 = _a12 * a14
+    $.L_TMS = fit
+    ([a11, 3], [a12, 4], [a13, a16 + 1.8])
+    ([a14, 0], [a15, 5], [1, a16])
+    (M)
+  }
+  $.L_EHG = (M < $.M_FGB) ? $.L_BGB : $.L_HeI
   
   $.R = $.R_ZAMS
   $.L = $.L_ZAMS
@@ -205,8 +242,8 @@ const star_update = (id, t) => {
   const $ = stars[id]
   const phase = in_range(0, t, $.t_MS) ? ($.M < 0.7 ? phases.C_MS : phases.MS)
   : in_range($.t_MS, t, $.t_BGB) ? phases.HG
-  : phases.GB
-  console.log(t, $.t_BGB)
+  : in_range($.t_BGB, t, 1000) ? phases.GB
+  : phases.R
   if(phase === phases.GB) $.bubble.r = $.R*20
 }
 
@@ -215,7 +252,7 @@ for(let i = 0; i < 50; i++){
   
   // Reject unlikely masses
   const test_mass = random_range(min_mass, max_mass)
-  if(initial_mass_function(mass) < initial_mass_function(test_mass)) continue
+  //if(initial_mass_function(mass) < initial_mass_function(test_mass)) continue
   
   const metallicity = 0.02
   
@@ -277,13 +314,12 @@ const chart = new Chart(canvas, {
 
 const draw = (now) => {
   for(const id in stars) {
-    star_update(id, now/1000)
+    star_update(id, now/1000 - 3)
   }
   chart.update()
   requestAnimationFrame(draw)
 }
 requestAnimationFrame(draw)
-      
     </script>
   </body>
 </html>
