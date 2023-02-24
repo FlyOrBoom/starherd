@@ -48,6 +48,8 @@ const max = (a,b) => Math.max(a,b)
 const min = (a,b) => Math.min(a,b)
 const clamp = (a,x,b) => min(max(x,a),b)
 const mix = (a,b,x) => a*(1-x) + b*x
+const interpolate = (x) => (x0, x1) => (v0, v1) =>
+  (x < x0) ? v0 : (x > x1) ? v1 : mix(v0, v1, (x-x0)/(x1-x0))
 const sqrt = (x) => Math.sqrt(x)
 const cbrt = (x) => Math.cbrt(x)
 const int_range = (n) => Array(n).fill(0).map((_, i) => i)
@@ -273,15 +275,12 @@ const star_init = (id, M, Z) => {
     const a19 = _a19 * a20
     const c1 = -8.672073e-2
     const M_star = a17 + 0.1
+
+    $.R.TMS = interpolate (M) (a17, M_star) (
+      fit (max(M, a17)) ([a18, 0], [a19, a21]) ([a20, 0], [1, a22]),
+      fit (min(M_star, M)) ([c1, 3], [a23, a26], [a24, a26+1.5]) ([a25, 0], [1, 5])
+    )
     
-    const n1 = [[a18, 0], [a19, a21]]
-    const d1 = [[a20, 0], [1, a22]]
-    const n2 = [[c1, 3], [a23, a26], [a24, a26+1.5]]
-    const d2 = [[a25, 0], [1, 5]]
-    const ΔM = M_star - a17
-    $.R.TMS = (M < a17) ? $.fit(...n1)(...d1)
-    : (M > M_star) ? $.fit(...n2)(...d2)
-    : mix(fit(a17)(...n1)(...d1), fit(M_star)(...n2)(...d2), (M - a17)/ΔM)
     if(M < 0.5) $.R.TMS = max($.R.TMS, 1.5*$.R.ZAMS)
   }
   
@@ -340,12 +339,12 @@ const star_init = (id, M, Z) => {
     const a44 = min(1.3, max(0.45, _a44))
     
     const B = M => fit(M)([a38, 0], [a39, 3.5])([a40, 3], [1, a41]) - 1
-    
+
     $.R.Δ = ( M < $.M.hook ) ? 0
     : in_range($.M.hook, M, a42) ? a43 * sqrt((M - $.M.hook)/(a42 - $.M.hook))
     : in_range(a42, M, 2.0) ? a43 + (B(2.0) - a43)*(((M-a42)/(2-a42))**a44)
     : ( M > 2.0 ) ? B(M)
-    : 0
+    : 0.0
   }
   
   { // Hurley 2000 (19)
@@ -376,7 +375,7 @@ const star_init = (id, M, Z) => {
     : in_range(a52, M, a53) ? a50 + (a51 - a50)*(M - a52)/(a53 - a52)
     : in_range(a53, M, 2.0) ? a51 + (B(2.0) - a51)*(M - a53)/(2.0 - a53)
     : ( M > 2.0 ) ? B(M)
-    : 0
+    : 0.0
   }
   
   { // Hurley 2000 (20)
@@ -428,7 +427,7 @@ const star_init = (id, M, Z) => {
     : in_range(0.65, M, a68) ? a63 + (a64-a63)*(M-0.65) / (a68 - 0.65)
     : in_range(a68, M, a66) ? a64 + (B(a66) - a64)*(M - a68) / (a66 - a68)
     : (M > a67) ? B(a67) + a65*(M - a67)
-    : 0
+    : 0.0
   }
   
   
@@ -480,18 +479,65 @@ const star_init = (id, M, Z) => {
     : (M <= 1.0) ? B(M)
     : in_range(1.0, M, a75) ? B(1.0) + (a80 - B(1.0))*(((M-1.0)/(a75-1.0))**a81)
     : in_range(a75, M, a75+1.0) ? C - 10.0*(M-a75)*C
-    : 0
+    : 0.0
   }
   
-  //$.L.EHG = (M < $.M.FGB) ? $.L.BGB : $.L.HeI
-  //$.R.EHG = (M < $.M.FGB) ? $.L.BGB : $.R.HeI
+  /*{ // Hurley 2000 (28-29)
+    $.M.c_MS = 0.0
+    
+    $.M.c_EHG = (M < $.M.HeF) ? $.M.c_GB
+    : in_range($.M.HeF, M, $.M.FGB) ? $.M.c_BGB
+    : ($.M.FGF < M) ? $.M.c.HeI
+    : 0.0
+    
+    const ρ = (1.586 + (M**5.25)) / (2.434 + 1.02*(M**5.25))
+    $.M.c_TMS = ρ*$.M.c_EHG
+    $.M.c_HG = ((1-T)*ρ + T) * $.M.c_EHG
+  }*/
+  
+  { // Hurley 2000 (36-40)
+    const F = interpolate(M)($.M.Hef, 2.5)
+    const p = F(6, 5)
+    const q = F(3, 2)
+    const B = max(3e+4, 500 + 1.75e+4 * (M**0.6))
+    const D0 = 5.37 * 0.135*$.ζ
+    const D = exp10(F(
+      D0, max(-1.0, max(0.975*D0 - 0.18*M, 0.5*D0 - 0.06*M))
+    ))
+    $.t.inf = $.t.BGB + 1
+  }
+ /* 
+  { // Hurley 2000 (49)
+    const coefficients = [
+      [3.9700e-1, 2.8826e-1, 5.2930e-1],
+      [9.960283e-1, 8.164393e-1, 2.383830e+0, 2.223436e+0, 8.638115e-1],
+      [2.561062e-1, 7.072646e-2, -5.444596e-2, -5.798167e-2, -1.349129e-2],
+      [1.157338e+0, 1.467883e+0, 4.299661e+0, 3.130500e+0, 6.992080e-1],
+      [4.022765e-1, 3.050010e-1, 9.962137e-1, 7.914079e-1, 1.728098e-1],
+    ]
+    const p = n => $.polynomial(coefficients[n])
+    const [ _b1, _b4, b5, _b6, b7 ] = int_range(5).map(p)
+    const b1 = min(0.54, _b1)
+    const b2 = clamp(-0.04167 + 55.67*Z, exp10(-4.6739 - 0.9394*$.σ), 0.4771 - 9329.21*(Z**2.94))
+    const _b3 = exp10(max(-0.1451, -2.2794 - 1.5175*$.σ - 0.254*$.σ*$.σ))
+    const b3 = (Z > 0.004) ? max(_b3, 0.7307 + 14265.1 * (Z**3.395)) : _b3
+    const b4 = _b4 + 0.1231572 * ($.ζ**5)
+    const b6 = _b6 + 0.01640687 * ($.ζ**5)
+    
+    const A = min(b4 * (M**-b5), b6 * (M**-b7))
+    $.R.GB = A * ((L**b1) + b2*(L**b3))
+    console.log(b1, b2, b3)
+  }
+  */
+  $.L.EHG = (M < $.M.FGB) ? $.L.BGB : $.L.HeI
+  $.R.EHG = (M < $.M.FGB) ? $.R.BGB : $.R.HeI
   
   $.R.now = $.R.ZAMS
   $.L.now = $.L.ZAMS
   $.T.now = sol_radius_and_sol_lum_to_temp($.R.now, $.L.now)
-  
-  $.η = (Z > 0.0009 || M < 1.0) ? 10 : 20
-  
+ 
+  $.η = (Z > 0.0009 || M < 10) ? 10 : 20
+ 
   $.bubble = { x: $.T.now, y: $.L.now, r: $.R.now*4 }
   $.color = temp_to_col($.T.now)
   
@@ -505,10 +551,14 @@ const star_update = (id, t) => {
   : in_range($.t.BGB, t, $.t.BGB + 1e3) ? phases.GB
   : phases.R
   
+  let τ // relative time
+  
   switch(phase){
+    
+    // Main sequence
     case phases.C_MS:
     case phases.MS:
-      const τ = t / $.t.MS
+      τ = t / $.t.MS
       const ε = 0.01
       const τ1 = min(1.0, t/$.t.hook)
       const τ2 = clamp(0.0, (t - (1.0 - ε)*$.t.hook)/(ε * $.t.hook), 1.0)
@@ -526,12 +576,21 @@ const star_update = (id, t) => {
         + (log10($.R.TMS/$.R.ZAMS) - $.R.α - $.R.β - $.γ)*(τ*τ*τ)
         - $.R.Δ*(τ1*τ1*τ1 - τ2*τ2*τ2)
       )
-      
+
       $.L.now = $.L.MS
       $.R.now = $.R.MS
       break
+    
+    // Hertzsprung gap
     case phases.HG:
-      $.R.now = $.R.ZAMS * 2
+      break
+      τ = (t - $.t.MS) / ($.t.BGB - $.t.MS)
+      console.log($.L.EHG)
+      $.L.HG = $.L.TMS * (($.L.EHG / $.L.TMS) ** τ)
+      $.R.HG = $.R.TMS * (($.R.EHG / $.R.TMS) ** τ)      
+
+      $.L.now = $.L.HG
+      $.R.now = $.R.HG
       break
     case phases.GB:
       $.R.now = $.R.ZAMS * 4
@@ -541,6 +600,7 @@ const star_update = (id, t) => {
       break
   }
  
+  if(t * 1e-10 > $.M.ZAMS**-2.5) $.R.now = 0
   
   $.bubble.x = $.T.now
   $.bubble.y = $.L.now
@@ -548,7 +608,7 @@ const star_update = (id, t) => {
   $.color = temp_to_col($.T.now)
 }
 
-for(let i = 0; i < 50; i++){
+for(let i = 0; i < 100; i++){
   const mass = random_range(min_mass, max_mass)
   
   // Reject unlikely masses
