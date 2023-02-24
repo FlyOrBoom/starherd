@@ -33,6 +33,10 @@ const in_range = (a, x, b) => (a <= x) && (x <= b)
 const log10 = (x) => Math.log(x)/Math.log(10.0)
 const max = (a,b) => Math.max(a,b)
 const min = (a,b) => Math.min(a,b)
+const clamp = (a,x,b) => min(max(x,a),b)
+const mix = (a,b,x) => a*(1-x) + b*x
+const sqrt = (x) => Math.sqrt(x)
+const cbrt = (x) => Math.cbrt(x)
 const int_range = (n) => Array(n).fill(0).map((_, i) => i)
 
 // Constants
@@ -40,6 +44,7 @@ const PI = Math.PI
 const STEFAN = 5.670374419e-8
 const L_sun = 3.86e+26 // watts
 const R_sun = 6.9634e+8 // meters
+const Z_sun = 0.02
 
 // Conversions
 const abs_mag_to_sol_lum = (M) => 
@@ -55,7 +60,7 @@ const temp_to_col = (T) => {
   const blackbody = [
    {temp:1000,col:"#ff3800"},{temp:1200,col:"#ff5300"},{temp:1400,col:"#ff6500"},{temp:1600,col:"#ff7300"},{temp:1800,col:"#ff7e00"},{temp:2000,col:"#ff8912"},{temp:2200,col:"#ff932c"},{temp:2400,col:"#ff9d3f"},{temp:2600,col:"#ffa54f"},{temp:2800,col:"#ffad5e"},{temp:3000,col:"#ffb46b"},{temp:3200,col:"#ffbb78"},{temp:3400,col:"#ffc184"},{temp:3600,col:"#ffc78f"},{temp:3800,col:"#ffcc99"},{temp:4000,col:"#ffd1a3"},{temp:4200,col:"#ffd5ad"},{temp:4400,col:"#ffd9b6"},{temp:4600,col:"#ffddbe"},{temp:4800,col:"#ffe1c6"},{temp:5000,col:"#ffe4ce"},{temp:5200,col:"#ffe8d5"},{temp:5400,col:"#ffebdc"},{temp:5600,col:"#ffeee3"},{temp:5800,col:"#fff0e9"},{temp:6000,col:"#fff3ef"},{temp:6200,col:"#fff5f5"},{temp:6400,col:"#fff8fb"},{temp:6600,col:"#fef9ff"},{temp:6800,col:"#f9f6ff"},{temp:7000,col:"#f5f3ff"},{temp:7200,col:"#f0f1ff"},{temp:7400,col:"#edefff"},{temp:7600,col:"#e9edff"},{temp:7800,col:"#e6ebff"},{temp:8000,col:"#e3e9ff"},{temp:8200,col:"#e0e7ff"},{temp:8400,col:"#dde6ff"},{temp:8600,col:"#dae4ff"},{temp:8800,col:"#d8e3ff"},{temp:9000,col:"#d6e1ff"},{temp:9200,col:"#d3e0ff"},{temp:9400,col:"#d1dfff"},{temp:9600,col:"#cfddff"},{temp:9800,col:"#cedcff"},{temp:10000,col:"#ccdbff"},{temp:10200,col:"#cadaff"},{temp:10400,col:"#c9d9ff"},{temp:10600,col:"#c7d8ff"},{temp:10800,col:"#c6d8ff"},{temp:11000,col:"#c4d7ff"},{temp:11200,col:"#c3d6ff"},{temp:11400,col:"#c2d5ff"},{temp:11600,col:"#c1d4ff"},{temp:11800,col:"#c0d4ff"},{temp:12000,col:"#bfd3ff"},{temp:12200,col:"#bed2ff"},{temp:12400,col:"#bdd2ff"},{temp:12600,col:"#bcd1ff"},{temp:12800,col:"#bbd1ff"},{temp:13000,col:"#bad0ff"},{temp:13200,col:"#b9d0ff"},{temp:13400,col:"#b8cfff"},{temp:13600,col:"#b7cfff"},{temp:13800,col:"#b7ceff"},{temp:14000,col:"#b6ceff"},{temp:14200,col:"#b5cdff"},{temp:14400,col:"#b5cdff"},{temp:14600,col:"#b4ccff"},{temp:14800,col:"#b3ccff"},{temp:15000,col:"#b3ccff"},{temp:15200,col:"#b2cbff"},{temp:15400,col:"#b2cbff"},{temp:15600,col:"#b1caff"},{temp:15800,col:"#b1caff"},{temp:16000,col:"#b0caff"},{temp:16200,col:"#afc9ff"},{temp:16400,col:"#afc9ff"},{temp:16600,col:"#afc9ff"},{temp:16800,col:"#aec9ff"},{temp:17000,col:"#aec8ff"},{temp:17200,col:"#adc8ff"},{temp:17400,col:"#adc8ff"},{temp:17600,col:"#acc7ff"},{temp:17800,col:"#acc7ff"},{temp:18000,col:"#acc7ff"},{temp:18200,col:"#abc7ff"},{temp:18400,col:"#abc6ff"},{temp:18600,col:"#aac6ff"},{temp:18800,col:"#aac6ff"},{temp:19000,col:"#aac6ff"},{temp:19200,col:"#a9c6ff"},{temp:19400,col:"#a9c5ff"},{temp:19600,col:"#a9c5ff"},{temp:19800,col:"#a9c5ff"},{temp:20000,col:"#a8c5ff"},{temp:20200,col:"#a8c5ff"},{temp:20400,col:"#a8c4ff"},{temp:20600,col:"#a7c4ff"},{temp:20800,col:"#a7c4ff"},{temp:21000,col:"#a7c4ff"},{temp:21200,col:"#a7c4ff"},{temp:21400,col:"#a6c3ff"},{temp:21600,col:"#a6c3ff"},{temp:21800,col:"#a6c3ff"},{temp:22000,col:"#a6c3ff"},{temp:22200,col:"#a5c3ff"},{temp:22400,col:"#a5c3ff"},{temp:22600,col:"#a5c3ff"},{temp:22800,col:"#a5c2ff"},{temp:23000,col:"#a4c2ff"},{temp:23200,col:"#a4c2ff"},{temp:23400,col:"#a4c2ff"},{temp:23600,col:"#a4c2ff"},{temp:23800,col:"#a4c2ff"},{temp:24000,col:"#a3c2ff"},{temp:24200,col:"#a3c1ff"},{temp:24400,col:"#a3c1ff"},{temp:24600,col:"#a3c1ff"},{temp:24800,col:"#a3c1ff"},{temp:25000,col:"#a3c1ff"},{temp:25200,col:"#a2c1ff"},{temp:25400,col:"#a2c1ff"},{temp:25600,col:"#a2c1ff"},{temp:25800,col:"#a2c1ff"},{temp:26000,col:"#a2c0ff"},{temp:26200,col:"#a2c0ff"},{temp:26400,col:"#a1c0ff"},{temp:26600,col:"#a1c0ff"},{temp:26800,col:"#a1c0ff"},{temp:27000,col:"#a1c0ff"},{temp:27200,col:"#a1c0ff"},{temp:27400,col:"#a1c0ff"},{temp:27600,col:"#a1c0ff"},{temp:27800,col:"#a0c0ff"},{temp:28000,col:"#a0bfff"},{temp:28200,col:"#a0bfff"},{temp:28400,col:"#a0bfff"},{temp:28600,col:"#a0bfff"},{temp:28800,col:"#a0bfff"},{temp:29000,col:"#a0bfff"},{temp:29200,col:"#a0bfff"},{temp:29400,col:"#9fbfff"},{temp:29600,col:"#9fbfff"},{temp:29800,col:"#9fbfff"},{temp:1e10,col:"#9fbfff"}
   ]
-  return blackbody.find(({temp})=> temp > T).col
+  return blackbody.find(({temp})=> temp > T).col + "88"
 }
 
 // Probability density function of stars' initial masses
@@ -86,23 +91,23 @@ const phases = {
   R: { name: "massless remnant", index: 15, },
 }
 
-const polynomial = coefficients => x => 
+const polynomial = x => coefficients => 
   coefficients.reduce((sum, coefficient, degree) => 
     sum + coefficient * (x**degree)
   , 0)
 
-const rational = (...pairs) => x =>
+const rational = x => (...pairs) =>
   pairs.reduce((sum, [coefficient, exponent]) => 
     sum + coefficient * (x ** exponent)
   , 0)
 
-const fit = (...numerator) => (...denominator) => x =>
-  rational(...numerator)(x) / rational(...denominator)(x)
+const fit = x => (...numerator) => (...denominator) =>
+  rational(x)(...numerator) / rational(x)(...denominator)
 
 let min_bv = -0.5, max_bv = +3
 let min_temp = bv_to_temp(min_bv), max_temp = bv_to_temp(max_bv)
 
-let min_mag = +10, max_mag = -10
+let min_mag = +10, max_mag = -20
 let min_sol_lum = abs_mag_to_sol_lum(min_mag), max_sol_lum = abs_mag_to_sol_lum(max_mag)
 
 let min_mass = 0.1, max_mass = 10
@@ -119,17 +124,21 @@ const bubble_config = {
 
 const stars = {}
 
-const star_to_bubble = ({T,L,R}) => ({ 
-  x: T, 
-  y: L, 
-  r: R*2
-})
-
-
 const star_init = (id, M, Z) => {
-  const $ = { id, M, Z }
+  const $ = { 
+    id, 
+    M: { ZAMS: M },
+    Z: { ZAMS: Z },
+    L: { },
+    R: { },
+    T: { },
+  }
   
-  $.ζ = log10(Z)
+  $.σ = log10(Z)
+  $.ζ = log10(Z/Z_sun)
+  
+  $.polynomial = polynomial($.ζ)
+  $.fit = fit(M)
   
   // Zero-age main sequence mass and radius
   
@@ -145,11 +154,11 @@ const star_init = (id, M, Z) => {
       [ 17.84778, -7.4534569, -48.96066856, -40.05386135, -9.09331816 ],
       [ 0.00022582, -0.00186899, 0.00388783, 0.00142402, -0.00007671 ],
     ]
-    const p = n => polynomial(coefficients[n])($.ζ)
+    const p = n => $.polynomial(coefficients[n])
     const [ a1, a2, a3, a4, a5, a6, a7, a8, a9 ] = int_range(9).map(p) 
-    const R = ( a1*(M**2.5) + a2*(M**6.5) + a3*(M**11) + a4*(M**19) + a5*(M**19.5) )
-    / (  a6 + a7*(M**2) + a8*(M**8.5) + (M**18.5) + a9*(M**19.5) )
-    $.R_ZAMS = R
+    $.R.ZAMS = $.fit
+    ([a1, 2.5], [a2, 6.5], [a3, 11], [a4, 19], [a5, 19.5])
+    ([a6, 0], [a7, 2], [a8, 8.5], [1, 18.5], [a9, 19.5])
   }
   
   {
@@ -162,28 +171,27 @@ const star_init = (id, M, Z) => {
       [ 0.7886606, -2.90870942, 6.54713531, 4.05606657, 0.53287322 ],
       [ 0.00586685, -0.01704237, 0.03872348, 0.02570041, 0.00383376 ]
     ]
-    const p = n => polynomial(coefficients[n])($.ζ)
+    const p = n => $.polynomial(coefficients[n])
     const [ a1, a2, a3, a4, a5, a6, a7 ] = int_range(7).map(p)
-    $.L_ZAMS = fit
+    $.L.ZAMS = $.fit
     ([a1, 5.5], [a2, 11])
     ([a3, 0], [1, 3], [a4, 5], [a5, 7], [a6, 8], [a7, 9.5])
-    (M)
   }
   
   
   // the initial mass above which a hook appears in the main-sequence
-  $.M_hook = 1.0185 + 0.16015*$.ζ + 0.0892*$.ζ*$.ζ
+  $.M.hook = 1.0185 + 0.16015*$.ζ + 0.0892*$.ζ*$.ζ
   
   // the maximum initial mass for which He ignites degenerately in a helium flash
-  $.M_HeF = 1.995 + 0.25*$.ζ + 0.087*$.ζ*$.ζ
+  $.M.HeF = 1.995 + 0.25*$.ζ + 0.087*$.ζ*$.ζ
   
   // the maximum initial mass for which He ignites on the first giant branch
-  $.M_FGB = 13.048 * (($.Z/0.02)**0.06) / (1 + 0.0012*((0.02/$.Z)**1.27))
+  $.M.FGB = 13.048 * (($.Z/0.02)**0.06) / (1 + 0.0012*((0.02/$.Z)**1.27))
   
   // where the mass of the convective envelope MCE first exceeds a set fraction of the envelope mass ME
-  $.ratio_CE_E = (M < $.M_HeF) ? (2/5) : (1/3)
+  $.ratio_CE_E = (M < $.M.HeF) ? (2/5) : (1/3)
   
-  {
+  { // Hurley 2000 (4)
     const coefficients = [
       [1.593890e+3, 2.053038e+3, 1.231226e+3, 2.327785e+2],
       [2.706708e+3, 1.483131e+3, 5.772723e+2, 7.411230e+1],
@@ -191,15 +199,14 @@ const star_init = (id, M, Z) => {
       [4.141960e-2, 4.564888e-2, 2.958542e-2, 5.571483e-3],
       [3.426349e-1],
     ]
-    const p = n => polynomial(coefficients[n])($.ζ)
+    const p = n => $.polynomial(coefficients[n])
     const [ a1, a2, a3, a4, a5 ] = int_range(5).map(p)
-    $.t_BGB = $.t_HeI = fit
+    $.t_BGB = $.t_HeI = $.fit
     ([a1, 0], [a2, 4], [a3, 5.5], [1, 7])
     ([a4, 2], [a5, 7])
-    (M)
   }
   
-  {
+  { // Hurley 2000 (5-7)
     const coefficients = [
       [1.949814e+1, 1.758178e+0, -6.008212e+0, -4.470533e+0],
       [4.903830e+0],
@@ -207,14 +214,14 @@ const star_init = (id, M, Z) => {
       [1.312179e+0, -3.294936e-1, 9.231860e-2, 2.610989e-2],
       [8.073972e-1],
     ]
-    const p = n => polynomial(coefficients[n])($.ζ)
+    const p = n => $.polynomial(coefficients[n])
     const [ a6, a7, a8, a9, a10 ] = int_range(5).map(p)
     const µ = max(0.5, 1 - 0.01 * max(a6 / (M**a7), a8 + a9/(M**a10)))
     const x = max(0.95, min(0.95 - 0.03*($.ζ + 0.30103), 0.99))
     $.t_MS = max(µ * $.t_BGB, x * $.t_BGB)
   }
   
-  {
+  { // Hurley 2000 (8)
     const coefficients = [
       [1.031538e+0, -2.434480e-1, 7.732821e+0, 6.460705e+0, 1.374484e+0],
       [1.043715e+0, -1.577474e+0, -5.168234e+0, -5.596506e+0, -1.299394e+0],
@@ -223,24 +230,203 @@ const star_init = (id, M, Z) => {
       [2.888720e+2, 2.952979e+2, 1.850341e+2, 3.797254e+1],
       [7.196580e0, 5.613746e-1, 3.805871e-1, 8.398728e-2],
     ]
-    const p = n => polynomial(coefficients[n])($.ζ)
+    const p = n => $.polynomial(coefficients[n])
     const [ _a11, _a12, a13, a14, a15, a16 ] = int_range(6).map(p)
     const a11 = _a11 * a14
     const a12 = _a12 * a14
-    $.L_TMS = fit
+    $.L.TMS = $.fit
     ([a11, 3], [a12, 4], [a13, a16 + 1.8])
     ([a14, 0], [a15, 5], [1, a16])
-    (M)
   }
-  $.L_EHG = (M < $.M_FGB) ? $.L_BGB : $.L_HeI
   
-  $.R = $.R_ZAMS
-  $.L = $.L_ZAMS
-  $.T = sol_radius_and_sol_lum_to_temp($.R, $.L)
+  { // Hurley 2000 (9)
+    const coefficients = [
+      [2.187715e-1, -2.154437e+0, -3.768678e+0, -1.975518e+0, -3.021475e-1],
+      [1.466440e+0, 1.839725e+0, 6.442199e+0, 4.023635e+0, 6.957529e-1],
+      [2.652091e+1, 8.178458e+1, 1.156058e+2, 7.633811e+1, 1.950698e+1],
+      [1.472103e+0, -2.947609e+0, -3.312828e+0, -9.945065e-1],
+      [3.071048e+0, -5.679941e+0, -9.745523e+0, -3.594543e+0],
+      [2.617890e+0, 1.019135e+0, -3.292551e-2, -7.445123e-2],
+      [1.075567e-2, 1.773287e-2, 9.610479e-3, 1.732469e-3],
+      [1.476246e+0, 1.899331e+0, 1.195010e+0, 3.035051e-1],
+      [5.502535e+0, -6.601663e-2, 9.968707e-2, 3.599801e-2],
+    ]
+    const p = n => $.polynomial(coefficients[n])
+    const [ _a18, _a19, a20, a21, a22, a23, a24, a25, a26 ] = int_range(6).map(p)
+    const a17 = 10 ** (max(0.097 - 0.1072*($.σ + 3), max(0.097, min(0.1461, 0.1461 + 0.1237*($.σ + 2)))))
+    const a18 = _a18 * a20
+    const a19 = _a19 * a20
+    const c1 = -8.672073e-2
+    const M_star = a17 + 0.1
+    
+    const n1 = [[a18, 0], [a19, a21]]
+    const d1 = [[a20, 0], [1, a22]]
+    const n2 = [[c1, 3], [a23, a26], [a24, a26+1.5]]
+    const d2 = [[a25, 0], [1, 5]]
+    const ΔM = M_star - a17
+    $.R.TMS = (M < a17) ? $.fit(...n1)(...d2)
+    : (M > M_star) ? $.fit(...n2)(...d2)
+    : mix(fit(a17)(...n1)(...d1), fit(M_star)(...n2)(...d1), (M - a17)/ΔM)
+    
+    if(M < 0.5) $.R.TMS = max($.R.TMS, 1.5*$.R.ZAMS)
+  }
   
-  $.bubble = star_to_bubble($)
-  $.color = temp_to_col($.T)
-
+  { // Hurley 2000 (10)
+    const coefficients = [
+      [9.511033e+1, 6.819618e+1, -1.045625e+1, -1.474939e+1],
+      [3.113458e+1, 1.012033e+1, -4.650511e+0, -2.463185e+0],
+      [1.413057e+0, 4.578814e-1, -6.850581e-2, -5.588658e-2],
+      [3.910862e+1, 5.196646e+1, 2.264970e+1, 2.873680e+0],
+      [4.597479e+0, -2.855179e-1, 2.709724e-1],
+      [6.682518e+0, 2.827718e-1, -7.294429e-2],
+    ]
+    const p = n => $.polynomial(coefficients[n])
+    const [ a27, a28, _a29, a30, a31, a32 ] = int_range(6).map(p)
+    const a29 = _a29 ** a32
+    
+    const c2 = 9.301992
+    const c3 = 4.637345
+    
+    $.L.BGB = $.fit([a27, a31], [a28, c2])([a29, 0], [a30, c3], [1, a32])
+  }
+  
+  { // Hurley 2000 (16)
+    const coefficients = [
+      [1.910302e-1, 1.158624e-1, 3.348990e-2, 2.599706e-3],
+      [3.931056e-1, 7.277637e-2, -1.366593e-1, -4.508946e-2],
+      [3.267776e-1, 1.204424e-1, 9.988332e-2, 2.455361e-2],
+      [5.990212e-1, 5.570264e-2, 6.207626e-2, 1.777283e-2],
+    ]
+    const p = n => $.polynomial(coefficients[n])
+    const [ a34, a35, a36, a37 ] = int_range(4).map(p)
+    const _a33 = min(1.4, 1.5135 + 0.3769 * $.ζ)
+    const a33 = max(0.6355 - 0.4192 * $.ζ, max(1.25, _a33))
+    
+    const B = M => min(a34 / (M**a35), a36 / (M**a37))
+    
+    $.L.Δ = ( M < $.M.hook ) ? 0
+    : in_range($.M.hook, M, a33) ? B*(((M - $.M.hook)/(a33 - $.M.hook))**0.4)
+    : ( M > a33 ) ? B(M)
+    : 0
+  }
+  
+  { // Hurley 2000 (17)
+    const coefficients = [
+      [7.330122e-1, 5.192827e-1, 2.316416e-1, 8.346941e-3],
+      [1.172768e+0, -1.209262e-1, -1.193023e-1, -2.859837e-2],
+      [3.982622e-1, -2.296279e-1, -2.262539e-1, -5.219837e-2],
+      [3.571038e+0, -2.223625e-2, -2.611794e-2, -6.359648e-3],
+      [1.9848e+0, 1.1386e+0, 3.5640e-1],
+      [6.300e-2, 4.810e-2, 9.840e-3],
+      [1.200e+0, 2.450e+0],
+    ]
+    const p = n => $.polynomial(coefficients[n])
+    const [ a38, a39, a40, a41, _a42, a43, _a44 ] = int_range(4).map(p)
+    const a42 = min(1.25, max(1.1, _a42))
+    const a44 = min(1.3, max(0.45, _a44))
+    
+    const B = M => fit(M)([a38, 0], [a39, 3.5])([a40, 3], [1, a41]) - 1
+    
+    $.R.Δ = ( M < $.M.hook ) ? 0
+    : in_range($.M.hook, M, a42) ? a43 * sqrt((M - $.M.hook)/(a42 - $.M.hook))
+    : in_range(a42, M, 2.0) ? a43 + (B(2.0) - a43)*(((M-a42)/(2-a42))**a44)
+    : ( M > 2.0 ) ? B(M)
+    : 0
+  }
+  
+  { // Hurley 2000 (19)
+    const coefficients = [
+      [2.321400e-1, 1.828075e-3, -2.232007e-2, -3.378734e-3],
+      [1.163659e-2, 3.427682e-3, 1.421393e-3, -3.710666e-3],
+      [1.048020e-2, -1.231921e-2, -1.686860e-2, -4.234354e-3],
+      [1.555590e+0, -3.223927e-1, -5.197429e-1, -1.066441e-1],
+      [9.7700e-2, -2.3100e-1, -7.5300e-2],
+      [2.4000e-1, 1.8000e-1, 5.9500e-1],
+      [3.3000e-1, 1.3200e-1, 2.1800e-1],
+      [1.1064e+0, 4.1500e-1, 1.8000e-1],
+      [1.1900e+0, 3.7700e-1, 1.7600e-1],
+    ]
+    const p = n => $.polynomial(coefficients[n])
+    const [ a45, a46, a47, a48, _a49, _a50, _a51, _a52, _a53 ] = int_range(9).map(p)
+    const a49 = max(_a49, 0.145)
+    const a50 = min(_a50, 0.306 + 0.053 * $.ζ)
+    const a51 = min(_a51, 0.3625 + 0.062 * $.ζ)
+    const a52 = (Z > 0.01) ? clamp(0.9, _a52, 1.0) : max(_a52, 0.9)
+    const a53 = (Z > 0.01) ? clamp(1.0, _a53, 1.1) : max(_a53, 1.0)
+    
+    const B = M => fit(M)([a45, 0], [a46, a48])([1, 0.4], [a47, 1.9])
+    
+    $.L.α = ( M < 0.5) ? a49
+    : in_range(0.5, M, 0.7) ? a49 + 5.0*(0.3 - a49)*(M - 0.5)
+    : in_range(0.7, M, a52) ? 0.3 + (a50 - 0.3)*(M - 0.7)/(a52 - 0.7)
+    : in_range(a52, M, a53) ? a50 + (a51 - a50)*(M - a52)/(a53 - a52)
+    : in_range(a53, M, 2.0) ? a51 + (B(2.0) - a51)*(M - a53)/(2.0 - a53)
+    : ( M > 2.0 ) ? B(M)
+    : 0
+  }
+  
+  { // Hurley 2000 (20)
+    const coefficients = [
+      [3.855707e-1, -6.104166e-1, 5.676742e+0, 1.060894e+1, 5.284014e+0],
+      [3.579064e-1, -6.442936e-1, 5.494644e+0, 1.054952e+1, 5.280991e+0],
+      [9.587587e-1, 8.777464e-1, 2.017321e-1],
+      [1.5135e+0, 3.7690e-1],
+    ]
+    const p = n => $.polynomial(coefficients[n])
+    const [ a54, a55, a56, _a57 ] = int_range(4).map(p)
+    const a57 = clamp(0.6355 - 0.4192*$.ζ, max(1.25, _a57), 1.4)
+    
+    const B = M => max(0.0, a54 - a55*(M**a56))
+    
+    $.L.β = (M > a57 && B(M) > 0.0) ? max(0.0, B(a57) - 10.0*B(a57)*(M-a57))
+    : B(M)
+  }
+  
+  { // Hurley 2000 (21)
+    const coefficients = [
+      [4.907546e-1, -1.683928e-1, -3.108742e-1, -7.202918e-2],
+      [4.537070e+0, -4.465455e+0, -1.612690e+0, -1.623246e+0],
+      [1.796220e+0, 2.814020e-1, 1.423325e+0, 3.421036e-1],
+      [2.256216e+0, 3.773400e-1, 1.537867e+0, 4.396373e-1],
+      [8.4300e-2, -4.7500e-2, -3.5200e-2],
+      [7.3600e-2, 7.4900e-2, 4.4260e-2],
+      [1.3600e-1, 3.5200e-2],
+      [1.564231e-3, 1.653042e-3, -4.439786e-3, -4.951011e-3, -1.216530e-3],
+      [1.4770e+0, 2.9600e-1],
+      [5.210157e+0, -4.143695e+0, -2.120870e+0],
+      [1.1160e+0, 1.6600e-1],
+    ]
+    const p = n => $.polynomial(coefficients[n])
+    const [ a58, a59, a60, a61, _a62, _a63, __a64, a65, _a66, a67, __a68 ] = int_range(11).map(p)
+    const a62 = max(0.065, _a62)
+    const a63 = (Z < 0.004) ? min(0.055, _a63) : _a63
+    const _a64 = max(0.091, min(0.121, __a64))
+    const a66 = clamp(0.8, max(_a66, min(1.6, 0.308 - 1.046 * $.ζ)), 0.8 - 2.0*$.ζ)
+    const _a68 = max(0.9, min(__a68, 1.0))
+        
+    const B = M => fit(M)([a58, a60])([a59, a61])
+    const a64 = (_a68 > a66) ? B(a66) : _a64
+    const a68 = min(_a68, a66)
+    
+    $.R.α = in_range(a66, M, a67) ? B(M)
+    : (M < 0.5) ? a62
+    : in_range(0.5, M, 0.65) ? a62 + (a63-a62)*(M-0.5) / 0.15
+    : in_range(0.65, M, a68) ? a63 + (a64-a63)*(M-0.65) / (a68 - 0.65)
+    : in_range(a68, M, a66) ? a64 + (B(a66) - a64)*(M - a68) / (a66 - a68)
+    : (M > a67) ? B(a67) + a65*(M - a67)
+    : 0
+  }
+  
+  //$.L.EHG = (M < $.M.FGB) ? $.L.BGB : $.L.HeI
+  //$.R.EHG = (M < $.M.FGB) ? $.L.BGB : $.R.HeI
+  
+  $.R.now = $.R.ZAMS
+  $.L.now = $.L.ZAMS
+  $.T.now = sol_radius_and_sol_lum_to_temp($.R.now, $.L.now)
+  
+  $.bubble = { x: $.T.now, y: $.L.now, r: $.R.now*4 }
+  $.color = temp_to_col($.T.now)
+  
   stars[id] = $
 }
 
@@ -248,9 +434,15 @@ const star_update = (id, t) => {
   const $ = stars[id]
   const phase = in_range(0, t, $.t_MS) ? ($.M < 0.7 ? phases.C_MS : phases.MS)
   : in_range($.t_MS, t, $.t_BGB) ? phases.HG
-  : in_range($.t_BGB, t, 1000) ? phases.GB
+  : in_range($.t_BGB, t, 1e30) ? phases.GB
   : phases.R
-  if(phase === phases.GB) $.bubble.r = $.R*20
+  if(phase === phases.HG) $.R.now = $.R.ZAMS * 2
+  if(phase === phases.GB) $.R.now = $.R.ZAMS * 4
+  
+  $.bubble.x = $.T.now
+  $.bubble.y = $.L.now
+  $.bubble.r = $.R.now*4
+  $.color = temp_to_col($.T.now)
 }
 
 for(let i = 0; i < 50; i++){
@@ -281,6 +473,8 @@ const chart = new Chart(canvas, {
     }]
   },
   options: {
+    clip: false,
+    borderColor: "white",
     scales: {
       x: {
         type: 'linear',
@@ -313,6 +507,13 @@ const chart = new Chart(canvas, {
         reverse: true,
         grid: { drawOnChartArea: true },
       },
+    },
+    onClick: (e) => {
+        const canvasPosition = Chart.helpers.getRelativePosition(e, chart)
+
+        // Substitute the appropriate scale IDs
+        const dataX = chart.scales.x.getValueForPixel(canvasPosition.x)
+        const dataY = chart.scales.y.getValueForPixel(canvasPosition.y)
     }
   }
 })
