@@ -60,6 +60,7 @@ const STEFAN = 5.670374419e-8
 const L_sun = 3.86e+26 // watts
 const R_sun = 6.9634e+8 // meters
 const Z_sun = 0.02
+const A_H = 1.44e-5 // rate of hydrogen fusion in CNO cycle
 
 // Conversions
 const abs_mag_to_sol_lum = (M) => 
@@ -75,7 +76,7 @@ const temp_to_col = (T) => {
   const blackbody = [
    {temp:1000,col:"#ff3800"},{temp:1200,col:"#ff5300"},{temp:1400,col:"#ff6500"},{temp:1600,col:"#ff7300"},{temp:1800,col:"#ff7e00"},{temp:2000,col:"#ff8912"},{temp:2200,col:"#ff932c"},{temp:2400,col:"#ff9d3f"},{temp:2600,col:"#ffa54f"},{temp:2800,col:"#ffad5e"},{temp:3000,col:"#ffb46b"},{temp:3200,col:"#ffbb78"},{temp:3400,col:"#ffc184"},{temp:3600,col:"#ffc78f"},{temp:3800,col:"#ffcc99"},{temp:4000,col:"#ffd1a3"},{temp:4200,col:"#ffd5ad"},{temp:4400,col:"#ffd9b6"},{temp:4600,col:"#ffddbe"},{temp:4800,col:"#ffe1c6"},{temp:5000,col:"#ffe4ce"},{temp:5200,col:"#ffe8d5"},{temp:5400,col:"#ffebdc"},{temp:5600,col:"#ffeee3"},{temp:5800,col:"#fff0e9"},{temp:6000,col:"#fff3ef"},{temp:6200,col:"#fff5f5"},{temp:6400,col:"#fff8fb"},{temp:6600,col:"#fef9ff"},{temp:6800,col:"#f9f6ff"},{temp:7000,col:"#f5f3ff"},{temp:7200,col:"#f0f1ff"},{temp:7400,col:"#edefff"},{temp:7600,col:"#e9edff"},{temp:7800,col:"#e6ebff"},{temp:8000,col:"#e3e9ff"},{temp:8200,col:"#e0e7ff"},{temp:8400,col:"#dde6ff"},{temp:8600,col:"#dae4ff"},{temp:8800,col:"#d8e3ff"},{temp:9000,col:"#d6e1ff"},{temp:9200,col:"#d3e0ff"},{temp:9400,col:"#d1dfff"},{temp:9600,col:"#cfddff"},{temp:9800,col:"#cedcff"},{temp:10000,col:"#ccdbff"},{temp:10200,col:"#cadaff"},{temp:10400,col:"#c9d9ff"},{temp:10600,col:"#c7d8ff"},{temp:10800,col:"#c6d8ff"},{temp:11000,col:"#c4d7ff"},{temp:11200,col:"#c3d6ff"},{temp:11400,col:"#c2d5ff"},{temp:11600,col:"#c1d4ff"},{temp:11800,col:"#c0d4ff"},{temp:12000,col:"#bfd3ff"},{temp:12200,col:"#bed2ff"},{temp:12400,col:"#bdd2ff"},{temp:12600,col:"#bcd1ff"},{temp:12800,col:"#bbd1ff"},{temp:13000,col:"#bad0ff"},{temp:13200,col:"#b9d0ff"},{temp:13400,col:"#b8cfff"},{temp:13600,col:"#b7cfff"},{temp:13800,col:"#b7ceff"},{temp:14000,col:"#b6ceff"},{temp:14200,col:"#b5cdff"},{temp:14400,col:"#b5cdff"},{temp:14600,col:"#b4ccff"},{temp:14800,col:"#b3ccff"},{temp:15000,col:"#b3ccff"},{temp:15200,col:"#b2cbff"},{temp:15400,col:"#b2cbff"},{temp:15600,col:"#b1caff"},{temp:15800,col:"#b1caff"},{temp:16000,col:"#b0caff"},{temp:16200,col:"#afc9ff"},{temp:16400,col:"#afc9ff"},{temp:16600,col:"#afc9ff"},{temp:16800,col:"#aec9ff"},{temp:17000,col:"#aec8ff"},{temp:17200,col:"#adc8ff"},{temp:17400,col:"#adc8ff"},{temp:17600,col:"#acc7ff"},{temp:17800,col:"#acc7ff"},{temp:18000,col:"#acc7ff"},{temp:18200,col:"#abc7ff"},{temp:18400,col:"#abc6ff"},{temp:18600,col:"#aac6ff"},{temp:18800,col:"#aac6ff"},{temp:19000,col:"#aac6ff"},{temp:19200,col:"#a9c6ff"},{temp:19400,col:"#a9c5ff"},{temp:19600,col:"#a9c5ff"},{temp:19800,col:"#a9c5ff"},{temp:20000,col:"#a8c5ff"},{temp:20200,col:"#a8c5ff"},{temp:20400,col:"#a8c4ff"},{temp:20600,col:"#a7c4ff"},{temp:20800,col:"#a7c4ff"},{temp:21000,col:"#a7c4ff"},{temp:21200,col:"#a7c4ff"},{temp:21400,col:"#a6c3ff"},{temp:21600,col:"#a6c3ff"},{temp:21800,col:"#a6c3ff"},{temp:22000,col:"#a6c3ff"},{temp:22200,col:"#a5c3ff"},{temp:22400,col:"#a5c3ff"},{temp:22600,col:"#a5c3ff"},{temp:22800,col:"#a5c2ff"},{temp:23000,col:"#a4c2ff"},{temp:23200,col:"#a4c2ff"},{temp:23400,col:"#a4c2ff"},{temp:23600,col:"#a4c2ff"},{temp:23800,col:"#a4c2ff"},{temp:24000,col:"#a3c2ff"},{temp:24200,col:"#a3c1ff"},{temp:24400,col:"#a3c1ff"},{temp:24600,col:"#a3c1ff"},{temp:24800,col:"#a3c1ff"},{temp:25000,col:"#a3c1ff"},{temp:25200,col:"#a2c1ff"},{temp:25400,col:"#a2c1ff"},{temp:25600,col:"#a2c1ff"},{temp:25800,col:"#a2c1ff"},{temp:26000,col:"#a2c0ff"},{temp:26200,col:"#a2c0ff"},{temp:26400,col:"#a1c0ff"},{temp:26600,col:"#a1c0ff"},{temp:26800,col:"#a1c0ff"},{temp:27000,col:"#a1c0ff"},{temp:27200,col:"#a1c0ff"},{temp:27400,col:"#a1c0ff"},{temp:27600,col:"#a1c0ff"},{temp:27800,col:"#a0c0ff"},{temp:28000,col:"#a0bfff"},{temp:28200,col:"#a0bfff"},{temp:28400,col:"#a0bfff"},{temp:28600,col:"#a0bfff"},{temp:28800,col:"#a0bfff"},{temp:29000,col:"#a0bfff"},{temp:29200,col:"#a0bfff"},{temp:29400,col:"#9fbfff"},{temp:29600,col:"#9fbfff"},{temp:29800,col:"#9fbfff"},{temp:1e10,col:"#9fbfff"}
   ]
-  return blackbody.find(({temp})=> temp > T).col + "88"
+  return blackbody.find(({temp})=> temp > T).col
 }
 
 // Probability density function of stars' initial masses
@@ -142,12 +143,13 @@ const stars = {}
 const star_init = (id, M, Z) => {
   const $ = { 
     id, 
-    M: { ZAMS: M },
-    Z: { ZAMS: Z },
-    L: { },
-    R: { },
-    T: { },
-    t: { }
+    M: { ZAMS: M }, // mass
+    Z: { ZAMS: Z }, // metallicity
+    L: { }, // luminosity
+    R: { }, // radius
+    T: { }, // temperature
+    t: { }, // time
+    _: { }, // misc
   }
   
   $.σ = log10(Z)
@@ -202,7 +204,7 @@ const star_init = (id, M, Z) => {
   $.M.HeF = 1.995 + 0.25*$.ζ + 0.087*$.ζ*$.ζ
   
   // the maximum initial mass for which He ignites on the first giant branch
-  $.M.FGB = 13.048 * (($.Z/0.02)**0.06) / (1 + 0.0012*((0.02/$.Z)**1.27))
+  $.M.FGB = 13.048 * ((Z/0.02)**0.06) / (1 + 0.0012*((0.02/Z)**1.27))
   
   // where the mass of the convective envelope MCE first exceeds a set fraction of the envelope mass ME
   $.ratio_CE_E = (M < $.M.HeF) ? (2/5) : (1/3)
@@ -496,15 +498,18 @@ const star_init = (id, M, Z) => {
   }*/
   
   { // Hurley 2000 (36-40)
-    const F = interpolate(M)($.M.Hef, 2.5)
-    const p = F(6, 5)
-    const q = F(3, 2)
+    const F = interpolate(M)($.M.HeF, 2.5)
+    $._.p = F(6, 5)
+    $._.q = F(3, 2)
     const B = max(3e+4, 500 + 1.75e+4 * (M**0.6))
-    const D0 = 5.37 * 0.135*$.ζ
-    const D = exp10(F(
+    const D0 = 5.37 * 0.135 * $.ζ
+    $._.D = exp10(F(
       D0, max(-1.0, max(0.975*D0 - 0.18*M, 0.5*D0 - 0.06*M))
     ))
-    $.t.inf = $.t.BGB + 1
+
+    $.t.inf = $.t.BGB 
+      + (1/(A_H * $._.D * ($._.p-1))) 
+      * (($._.D/$.L.BGB)**(1-1/$._.p))
   }
  /* 
   { // Hurley 2000 (49)
@@ -538,12 +543,15 @@ const star_init = (id, M, Z) => {
  
   $.η = (Z > 0.0009 || M < 10) ? 10 : 20
  
-  $.bubble = { x: $.T.now, y: $.L.now, r: $.R.now*4 }
-  $.color = temp_to_col($.T.now)
+  $.bubble = {}
+  $.color = ""
   
   stars[id] = $
+  star_update(id, 0)
 }
 
+const bubbles = []
+const colors = []
 const star_update = (id, t) => {
   const $ = stars[id]
   const phase = in_range(0, t, $.t.MS) ? ($.M < 0.7 ? phases.C_MS : phases.MS)
@@ -551,14 +559,16 @@ const star_update = (id, t) => {
   : in_range($.t.BGB, t, $.t.BGB + 1e3) ? phases.GB
   : phases.R
   
-  let τ // relative time
+  $.color = temp_to_col($.T.now)
+
+ // relative time
   
   switch(phase){
     
     // Main sequence
     case phases.C_MS:
-    case phases.MS:
-      τ = t / $.t.MS
+    case phases.MS: {
+      const τ = t / $.t.MS
       const ε = 0.01
       const τ1 = min(1.0, t/$.t.hook)
       const τ2 = clamp(0.0, (t - (1.0 - ε)*$.t.hook)/(ε * $.t.hook), 1.0)
@@ -580,9 +590,10 @@ const star_update = (id, t) => {
       $.L.now = $.L.MS
       $.R.now = $.R.MS
       break
+    }
     
     // Hertzsprung gap
-    case phases.HG:
+    case phases.HG: {
       break
       τ = (t - $.t.MS) / ($.t.BGB - $.t.MS)
       console.log($.L.EHG)
@@ -592,12 +603,22 @@ const star_update = (id, t) => {
       $.L.now = $.L.HG
       $.R.now = $.R.HG
       break
-    case phases.GB:
+    }
+    case phases.GB: {
+      $.L.GB = $._.D * (
+        (($._.p - 1)*A_H*$._.D*($.t.inf - t))
+        **($._.p/(1-$._.p))
+      )
       $.R.now = $.R.ZAMS * 4
+      $.L.now = $.L.GB
+      $.color += "22"
       break
-    default:
+    }
+    default: {
       $.R.now = $.R.ZAMS
+      
       break
+    }
   }
  
   if(t * 1e-10 > $.M.ZAMS**-2.5) $.R.now = 0
@@ -605,10 +626,12 @@ const star_update = (id, t) => {
   $.bubble.x = $.T.now
   $.bubble.y = $.L.now
   $.bubble.r = $.R.now*4
-  $.color = temp_to_col($.T.now)
+  
+  bubbles[id] = $.bubble
+  colors[id] = $.color
 }
 
-for(let i = 0; i < 100; i++){
+for(let i = 0; i < 10; i++){
   const mass = random_range(min_mass, max_mass)
   
   // Reject unlikely masses
@@ -630,8 +653,8 @@ const chart = new Chart(canvas, {
   data: {
     datasets: [{
       label: 'Stars',
-      data: Object.values(stars).map(s=>s.bubble),
-      backgroundColor: Object.values(stars).map(s=>s.color),
+      data: bubbles,
+      backgroundColor: colors,
       borderWidth: 1
     }]
   },
@@ -684,7 +707,7 @@ const chart = new Chart(canvas, {
 const $time = document.getElementById("time")
 const draw = (now) => {
   const time = (now - 3000)/10
-  $time.value = time
+  $time.value = time.toFixed(0)
   for(const id in stars) {
     star_update(id, time)
   }
