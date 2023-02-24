@@ -1,6 +1,13 @@
 <html>
   <head>
     <title>Starherd</title>
+    <meta charset=UTF-8>
+    <meta name=description content="Evolving H-R diagram">
+    <meta name=keywords content=astronomy>
+    <meta name=author content=Xing>
+    <meta name=viewport content="width=device-width, initial-scale=1">
+    <link rel=stylesheet href=style.css>
+    <link rel='shortcut icon' type=image/png href=favicon.png>
     <style>
 html, body {
   margin: 0;
@@ -8,18 +15,23 @@ html, body {
   height: 100%;
   background: #222;
   color: white;
+  font-size: 16px;
 }
     </style>
   </head>
   <body>
     <canvas id="hr"></canvas>
+    <label>
+      <input id="time" type="number" min="0" max="1e8" value="0" step="1">
+      <span> years</span>
+    </label>
     <h1>Starherd</h1>
     <p> 
       A stellar evolution visualizer by Xing, based on 
       <a href="https://arxiv.org/abs/astro-ph/0001295">"Comprehensive analytic formulae for stellar evolution as a function of mass and metallicity"</a> 
       by Hurley, Pols &amp; Tout, and 
-      <a href="https://ui.adsabs.harvard.edu/abs/1996MNRAS.281..257T/abstract">"Zero-age main-seqence radii and luminosities as analytic functions of mass and metallicity"</a> 
-      by Eggleton, Fitchett &amp; Tout.
+      <a href="https://ui.adsabs.harvard.edu/abs/1996MNRAS.281..257T/abstract">"Zero-age main-sequence radii and luminosities as analytic functions of mass and metallicity"</a> 
+      by Tout, Pols, Eggleton, &amp; Han.
     </p>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
