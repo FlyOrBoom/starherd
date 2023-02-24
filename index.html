@@ -7,13 +7,17 @@ html, body {
   width: 100%;
   height: 100%;
   background: #222;
+  color: white;
 }
     </style>
   </head>
   <body>
     <canvas id="hr"></canvas>
+    <h1>Starherd</h1>
+    <p> A stellar evolution visualizer by Xing, based on "Comprehensive analytic formulae for stellar evolution as a function of mass and metallicity" by Hurley, Pols &amp; Tout, and "Zero-age main-seqence radii and luminosities as analytic functions of mass and metallicity" by Eggleton, Fitchett &amp; Tout.</p>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
+      
 "use strict"
 
 const canvas = document.getElementById('hr')
@@ -103,7 +107,7 @@ const stars = {}
 const star_to_bubble = ({T,L,R}) => ({ 
   x: T, 
   y: L, 
-  r: R*20
+  r: R*2
 })
 
 const star_init = (id, M, Z) => {
@@ -198,10 +202,15 @@ const star_init = (id, M, Z) => {
 }
 
 const star_update = (id, t) => {
-  stars[id].bubble.x -= 10
+  const $ = stars[id]
+  const phase = in_range(0, t, $.t_MS) ? ($.M < 0.7 ? phases.C_MS : phases.MS)
+  : in_range($.t_MS, t, $.t_BGB) ? phases.HG
+  : phases.GB
+  console.log(t, $.t_BGB)
+  if(phase === phases.GB) $.bubble.r = $.R*20
 }
 
-for(let i = 0; i < 100; i++){
+for(let i = 0; i < 50; i++){
   const mass = random_range(min_mass, max_mass)
   
   // Reject unlikely masses
@@ -268,12 +277,13 @@ const chart = new Chart(canvas, {
 
 const draw = (now) => {
   for(const id in stars) {
-    star_update(id, now)
+    star_update(id, now/1000)
   }
   chart.update()
   requestAnimationFrame(draw)
 }
 requestAnimationFrame(draw)
+      
     </script>
   </body>
 </html>
