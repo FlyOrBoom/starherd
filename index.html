@@ -14,17 +14,23 @@ html, body {
   <body>
     <canvas id="hr"></canvas>
     <h1>Starherd</h1>
-    <p> A stellar evolution visualizer by Xing, based on "Comprehensive analytic formulae for stellar evolution as a function of mass and metallicity" by Hurley, Pols &amp; Tout, and "Zero-age main-seqence radii and luminosities as analytic functions of mass and metallicity" by Eggleton, Fitchett &amp; Tout.</p>
+    <p> 
+      A stellar evolution visualizer by Xing, based on 
+      <a href="https://arxiv.org/abs/astro-ph/0001295">"Comprehensive analytic formulae for stellar evolution as a function of mass and metallicity"</a> 
+      by Hurley, Pols &amp; Tout, and 
+      <a href="https://ui.adsabs.harvard.edu/abs/1996MNRAS.281..257T/abstract">"Zero-age main-seqence radii and luminosities as analytic functions of mass and metallicity"</a> 
+      by Eggleton, Fitchett &amp; Tout.
+    </p>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
- "use strict"
+"use strict"
 
 const canvas = document.getElementById('hr')
 
 // Math
 const random_range = (a, b) => a + (b - a) * Math.random()
 const in_range = (a, x, b) => (a <= x) && (x <= b)
-const log10 = (x) => Math.log(x)/Math.log(10)
+const log10 = (x) => Math.log(x)/Math.log(10.0)
 const max = (a,b) => Math.max(a,b)
 const min = (a,b) => Math.min(a,b)
 const int_range = (n) => Array(n).fill(0).map((_, i) => i)
@@ -179,11 +185,11 @@ const star_init = (id, M, Z) => {
   
   {
     const coefficients = [
-      [1.593890, 2.053038, 1.231226, 2.327785, 0],
-      [2.706708, 1.483131, 5.772723, 7.411230, 0],
-      [1.466143, -1.048442, -6.795374, -1.391127, 0],
-      [4.141960, 4.564888, 2.958542, 5.571483, 0],
-      [3.426349, 0,0,0,0]
+      [1.593890e+3, 2.053038e+3, 1.231226e+3, 2.327785e+2],
+      [2.706708e+3, 1.483131e+3, 5.772723e+2, 7.411230e+1],
+      [1.466143e+2, -1.048442e+2, -6.795374e+1, -1.391127e+1],
+      [4.141960e-2, 4.564888e-2, 2.958542e-2, 5.571483e-3],
+      [3.426349e-1],
     ]
     const p = n => polynomial(coefficients[n])($.ζ)
     const [ a1, a2, a3, a4, a5 ] = int_range(5).map(p)
@@ -195,11 +201,11 @@ const star_init = (id, M, Z) => {
   
   {
     const coefficients = [
-      [1.949814, 1.758178, -6.008212, -4.470533],
-      [4.903830, 0, 0, 0],
-      [5.212154, 3.166411, -2.750074, -2.271549],
-      [1.312179, -3.294936, 9.231860, 2.610989],
-      [8.073972, 0, 0, 0],
+      [1.949814e+1, 1.758178e+0, -6.008212e+0, -4.470533e+0],
+      [4.903830e+0],
+      [5.212154e-2, 3.166411e-2, -2.750074e-3, -2.271549e-3],
+      [1.312179e+0, -3.294936e-1, 9.231860e-2, 2.610989e-2],
+      [8.073972e-1],
     ]
     const p = n => polynomial(coefficients[n])($.ζ)
     const [ a6, a7, a8, a9, a10 ] = int_range(5).map(p)
@@ -210,12 +216,12 @@ const star_init = (id, M, Z) => {
   
   {
     const coefficients = [
-      [1.031538, -2.434480, 7.732821, 6.460705, 1.374484],
-      [1.043715, -1.577474, -5.168234, -5.596506, -1.299394],
-      [7.859573, -8.542048, -2.642511, -9.585707],
-      [3.858911, 2.459681, -7.630093, -3.486057, -4.861703],
-      [2.888720, 2.952979, 1.850341, 3.797254],
-      [7.196580, 5.613746, 3.805871, 8.398728],
+      [1.031538e+0, -2.434480e-1, 7.732821e+0, 6.460705e+0, 1.374484e+0],
+      [1.043715e+0, -1.577474e+0, -5.168234e+0, -5.596506e+0, -1.299394e+0],
+      [7.859573e+2, -8.542048e+0, -2.642511e+1, -9.585707e+0],
+      [3.858911e+3, 2.459681e+3, -7.630093e+1, -3.486057e+2, -4.861703e+1],
+      [2.888720e+2, 2.952979e+2, 1.850341e+2, 3.797254e+1],
+      [7.196580e0, 5.613746e-1, 3.805871e-1, 8.398728e-2],
     ]
     const p = n => polynomial(coefficients[n])($.ζ)
     const [ _a11, _a12, a13, a14, a15, a16 ] = int_range(6).map(p)
@@ -293,7 +299,7 @@ const chart = new Chart(canvas, {
       },
       y: {
         type: 'logarithmic',
-        title: { display, text: 'Luminosity in Suns (L⊙)' },
+        title: { display, text: 'Luminosity in Suns eL⊙,' },
         display: true,
         position: 'right',
         min: min_sol_lum, max: max_sol_lum,
@@ -314,7 +320,7 @@ const chart = new Chart(canvas, {
 
 const draw = (now) => {
   for(const id in stars) {
-    star_update(id, now/1000 - 3)
+    star_update(id, now/100 - 3)
   }
   chart.update()
   requestAnimationFrame(draw)
