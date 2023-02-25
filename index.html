@@ -178,7 +178,7 @@ const star_init = (id, M, Z) => {
   
   // Zero-age main sequence mass and radius
   
-  // (T2)
+  // eT2,
   {
     const [ a1, a2, a3, a4, a5, a6, a7, a8, a9 ] = $.from_coefficients(
       [ 1.715359, 0.62246212, -0.92557761, -1.16996966, -0.30631491 ], 
@@ -196,7 +196,7 @@ const star_init = (id, M, Z) => {
     ([a6, 0], [a7, 2], [a8, 8.5], [1, 18.5], [a9, 19.5])
   }
   
-  // (T1)
+  // eT1,
   {
     const [ a1, a2, a3, a4, a5, a6, a7 ] = $.from_coefficients(
       [ 0.3970417, -0.32913574, 0.34776688, 0.37470851, 0.09011915 ],
@@ -214,15 +214,15 @@ const star_init = (id, M, Z) => {
   
   // (H1, H2, H3)
   {
-    // (H1)
+    // eH1,
     // the initial mass above which a hook appears in the main-sequence
     $.M.hook = 1.0185 + 0.16015*$.ζ + 0.0892*$.ζ*$.ζ
 
-    // (H2)
+    // eH2,
     // the maximum initial mass for which He ignites degenerately in a helium flash
     $.M.HeF = 1.995 + 0.25*$.ζ + 0.087*$.ζ*$.ζ
 
-    // (H3)
+    // eH3,
     // the maximum initial mass for which He ignites on the first giant branch
     $.M.FGB = 13.048 * ((Z/0.02)**0.06) / (1 + 0.0012*((0.02/Z)**1.27))
 
@@ -232,7 +232,7 @@ const star_init = (id, M, Z) => {
   
   // [5.1] Main-sequence and Hertzsprung gap
   
-  // (H4)
+  // eH4,
   {
     const [ a1, a2, a3, a4, a5 ] = $.from_coefficients(
       [1.593890e+3, 2.053038e+3, 1.231226e+3, 2.327785e+2],
@@ -241,7 +241,7 @@ const star_init = (id, M, Z) => {
       [4.141960e-2, 4.564888e-2, 2.958542e-2, 5.571483e-3],
       [3.426349e-1]
     )
-    $.t.BGB = $.t.HeI = $.fit
+    $.t.BGB = $.fit
     ([a1, 0], [a2, 4], [a3, 5.5], [1, 7])
     ([a4, 2], [a5, 7])
   }
@@ -256,19 +256,19 @@ const star_init = (id, M, Z) => {
       [8.073972e-1]
     )
     
-    // (H7)
+    // eH7,
     const µ = max(0.5, 1 - 0.01 * max(a6 / (M**a7), a8 + a9/(M**a10)))
     
     $.t.hook = µ * $.t.BGB
     
-    // (H6)
+    // eH6,
     const x = max(0.95, min(0.95 - 0.03*($.ζ + 0.30103), 0.99))
     
-    // (H5)
+    // eH5,
     $.t.MS = max($.t.hook, x * $.t.BGB)
   }
   
-  // (H8)
+  // eH8,
   {
     const [ _a11, _a12, a13, a14, a15, a16 ] = $.from_coefficients(
       [1.031538e+0, -2.434480e-1, 7.732821e+0, 6.460705e+0, 1.374484e+0],
@@ -285,7 +285,7 @@ const star_init = (id, M, Z) => {
     ([a14, 0], [a15, 5], [1, a16])
   }
   
-  // (H9)
+  // eH9,
   {
     const [ _a18, _a19, a20, a21, a22, a23, a24, a25, a26 ] = $.from_coefficients(
       [2.187715e-1, -2.154437e+0, -3.768678e+0, -1.975518e+0, -3.021475e-1],
@@ -444,14 +444,12 @@ const star_init = (id, M, Z) => {
   
   // (H20)
   {
-    const coefficients = [
+    const [ a54, a55, a56, _a57 ] = $.from_coefficients(
       [3.855707e-1, -6.104166e-1, 5.676742e+0, 1.060894e+1, 5.284014e+0],
       [3.579064e-1, -6.442936e-1, 5.494644e+0, 1.054952e+1, 5.280991e+0],
       [9.587587e-1, 8.777464e-1, 2.017321e-1],
-      [1.5135e+0, 3.7690e-1],
-    ]
-    const p = n => $.polynomial(coefficients[n])
-    const [ a54, a55, a56, _a57 ] = int_range(4).map(p)
+      [1.5135e+0, 3.7690e-1]
+    )
     const a57 = clamp(0.6355 - 0.4192*$.ζ, max(1.25, _a57), 1.4)
     
     const B = M => max(0.0, a54 - a55*(M**a56))
@@ -542,35 +540,7 @@ const star_init = (id, M, Z) => {
     : in_range(a75, M, a75+1.0) ? C - 10.0*(M-a75)*C
     : 0.0
   }
-  
-  // (H25, H26, H27, H28, H29, H30) 
-  {
-    // (H25)
-    $.τ.HG_ = t => (t - $.t.MS) / ($.t.BGB - $.t.MS)
-    
-    // (H26)
-    $.L.HG_ = τ => $.L.TMS * (($.L.EHG / $.L.TMS) ** τ)
 
-    // (H27)
-    $.R.HG_ = τ => $.R.TMS * (($.R.EHG / $.R.TMS) ** τ)      
-
-    $.Mc.MS = 0.0
-    
-    // (H28)
-    $.Mc.EHG = (M < $.M.HeF) ? $.Mc.GB
-    : in_range($.M.HeF, M, $.M.FGB) ? $.Mc.BGB
-    : ($.M.FGF < M) ? $.M.c.HeI
-    : 0.0
-    
-    // (H29)
-    const ρ = (1.586 + (M**5.25)) / (2.434 + 1.02*(M**5.25))
-    $.Mc.TMS = ρ * $.Mc.EHG
-
-    // (H30)
-    $.Mc.HG_ = τ => ((1-τ)*$._.ρ + τ) * $.Mc.EHG
-  }
-  
-  // [5.2] First giant branch
 
    // (H49, H50)
   {
@@ -593,9 +563,78 @@ const star_init = (id, M, Z) => {
     
     // (H50)
     $.R.HeI_ = Mc => $.R.GB_($.L.HeI) / $.R.mHe_(Mc)
-    
-    //console.log($.L.HeI, $.R.HeI)
+
+    // (H p.6)
+    $.L.EHG = (M < $.M.FGB) ? $.L.BGB : $.L.HeI
+    $.R.EHG = (M < $.M.FGB) ? $.R.BGB : $.R.HeI
   }
+
+  // (H66)
+  {
+    const [ _b36, _b37, _b38 ] = $.from_coefficients(
+      [1.445216e-1, -6.180219e-2, 3.093878e-2, 1.567090e-2],
+      [1.304129e+0, 1.395919e-1, 4.142455e-3, -9.732503e-3],
+      [5.114149e-1, -1.160850e-2]
+    )
+    const b36 = _b36 ** 4
+    const b37 = 4.0 * _b37
+    const b38 = _b38 ** 4
+    $.Mc.BAGB = (b36 * (M**b37) + b38) ** (1/4)
+  }
+  
+  // (H44)
+  {
+    const c1 = 9.20925e-5
+    const c2 = 5.402216
+    const Mc = 0.1 // TODO: dummy variable
+    const C = Mc*($.L.BGB_($.M.HeF) ** 4) - c1*($.M.HeF ** c2)
+
+    // (H44)
+    $.Mc.BGB = min(
+      0.95 * $.Mc.BAGB, 
+      ( C + c1*(M**c2) ) ** (1/4)
+    )
+  }
+  
+  // (H45)
+  {
+    // (H p.11)
+    $.τ.GB_ = t => (t - $.t.BGB) / ($.t.HeI - $.t.BGB)
+    
+    // (H45)
+    $.Mc.GB_ = (t, τ) => (M > $.M.HeF) ? $.Mc.BGB + ($.Mc.HeI - $.Mc.BGB) * τ
+    : $.Mc.GB_1_(t)
+  }
+  
+  // (H25, H26, H27, H28, H29, H30) 
+  {
+    // (H25)
+    $.τ.HG_ = t => (t - $.t.MS) / ($.t.BGB - $.t.MS)
+    
+    // (H26)
+    $.L.HG_ = τ => $.L.TMS * (($.L.EHG / $.L.TMS) ** τ)
+
+    // (H27)
+    $.R.HG_ = τ => $.R.TMS * (($.R.EHG / $.R.TMS) ** τ)      
+
+    $.Mc.MS = 0.0
+    
+    // (H28)
+    $.Mc.EHG = (M < $.M.HeF) ? $.Mc.BGB // $.Mc.GB
+    : in_range($.M.HeF, M, $.M.FGB) ? $.Mc.BGB
+    : ($.M.FGF < M) ? $.Mc.HeI
+    : 0.0
+    
+    // (H29)
+    const ρ = (1.586 + (M**5.25)) / (2.434 + 1.02*(M**5.25))
+    $.Mc.TMS = ρ * $.Mc.EHG
+
+    // (H30)
+    $.Mc.HG_ = τ => ((1-τ)*$._.ρ + τ) * $.Mc.EHG
+  }
+  
+  // [5.2] First giant branch
+
   
   // (H34, H37, H38, H39, H40, H41, H42, H43)
   {    
@@ -663,29 +702,6 @@ const star_init = (id, M, Z) => {
     $.t.HeI = ($.L.HeI < Lx) ? t1 : t2
   }
   
-  // (H44)
-  {
-    const c1 = 9.20925e-5
-    const c2 = 5.402216
-    const C = $.M.c*($.L.BGB_($.M.HeF) ** 4) - c1*($.M.HeF ** c2)
-    
-    // (H44)
-    $.Mc.BGB = min(
-      0.95 * $.Mc.BAGB, 
-      ( C + c1*(M**c2) ) ** (1/4)
-    )
-  }
-  
-  // (H45)
-  {
-    // (H p.11)
-    $.τ.GB_ = t => (t - $.t.BGB) / ($.t.HeI - $.t.BGB)
-    
-    // (H45)
-    $.Mc.GB_ = (t, τ) => (M > $.M.HeF) ? $.Mc.BGB + ($.Mc.HeI - $.Mc.BGB) * τ
-    : $.Mc.GB_1_(t)
-  }
-  
   // (H46)
   {
     const [ _b1, _b4, b5, _b6, b7 ] = $.from_coefficients(
@@ -710,6 +726,7 @@ const star_init = (id, M, Z) => {
   
   // [5.3] Core helium burning
  
+  
   // (H51)
   { 
     const [ _b14, b15, _b16 ] = $.from_coefficients(
@@ -798,9 +815,6 @@ const star_init = (id, M, Z) => {
     : (M > $.M.FGB) ? $.R.HeI
     : 0.0
   }
-  
-  $.L.EHG = (M < $.M.FGB) ? $.L.BGB : $.L.HeI
-  $.R.EHG = (M < $.M.FGB) ? $.R.BGB : $.R.HeI
  
   $.bubble = {}
   $.color = ""
@@ -812,6 +826,8 @@ const star_init = (id, M, Z) => {
 
 const bubbles = []
 const colors = []
+const borders = []
+
 const star_update = (id, t) => {
   const $ = stars[id]
   const phase = in_range(0, t, $.t.MS) ? ($.M < 0.7 ? phases.C_MS : phases.MS)
@@ -834,6 +850,8 @@ const star_update = (id, t) => {
 
       $.L.now = $.L.MS
       $.R.now = $.R.MS
+      $.border = "white"
+      $.opacity = "ff"
       break
     }
     
@@ -847,6 +865,8 @@ const star_update = (id, t) => {
 
       $.L.now = $.L.HG
       $.R.now = $.R.HG
+      $.border = "green"
+      $.opacity = "ff"
       break
     }
     case phases.GB: {
@@ -858,20 +878,26 @@ const star_update = (id, t) => {
       
       $.R.now = $.R.GB
       $.L.now = $.L.GB
+      $.border = "blue"
+      $.opacity = "88"
       break
     }
     // no remnant
     case phases.R: {
-      $.R.now = 0
+      $.R.now = 1
+      $.border = "black"
+      $.opacity = "11"
       break
     }
     default: {
       $.R.now = $.R.ZAMS
       $.L.now = $.L.ZAMS
+      $.border = "red"
+      $.opacity = "ff"
       break
     }
   }
-  if(phase.index < 15) console.log(phase)
+  //if(phase.index < 15) console.log(phase)
   //console.log(JSON.stringify($.t,"",2))
  
   $.T.now = radius_lum_to_temp($.R.now, $.L.now)
@@ -882,7 +908,8 @@ const star_update = (id, t) => {
   $.bubble.r = $.R.now*4
   
   bubbles[id] = $.bubble
-  colors[id] = $.color
+  colors[id] = $.color + $.opacity
+  borders[id] = $.border
 }
 
 for(let i = 0; i < n_stars; i++){
@@ -897,7 +924,6 @@ for(let i = 0; i < n_stars; i++){
   star_init(i, mass, metallicity)
 }
 
-
 Chart.defaults.color = '#ccc'
 Chart.defaults.borderColor = '#444'
 Chart.defaults.maintainAspectRatio = false
@@ -909,6 +935,7 @@ const chart = new Chart(canvas, {
       label: 'Stars',
       data: bubbles,
       backgroundColor: colors,
+      borderColor: borders,
       borderWidth: 1
     }]
   },
@@ -961,7 +988,7 @@ const chart = new Chart(canvas, {
 
 const $time = document.getElementById("time")
 const draw = (now) => {
-  const time = 5*now/1000
+  const time = 50*now/1000
   $time.value = time.toFixed(2)
   for(const id in stars) {
     star_update(id, time)
