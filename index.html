@@ -22,8 +22,8 @@ html, body {
   <body>
     <canvas id="hr"></canvas>
     <label>
-      <input id="time-slider" type="range" min="0" max="1e5" value="0" step="1" style="width: 95vw">
-      <input id="time-number" type="number" min="0" max="1e5" value="0" step="1">
+      <input id="time-slider" type="range" min="0" max="5" value="0" step="1e-5" style="width: 95vw">
+      <input id="time-number" type="number" min="0" max="1e5" value="1e-2" step="1">
       <span> million years</span>
     </label>
     <h1>Starherd</h1>
@@ -153,7 +153,8 @@ console.log(max_temp)
 let min_mag = +10, max_mag = -20
 let min_sol_lum = abs_mag_to_sol_lum(min_mag), max_sol_lum = abs_mag_to_sol_lum(max_mag)
 
-let min_mass = 0.1, max_mass = 10
+let min_mass = 0.1, max_mass = 20
+let min_metal = 0.01, max_metal = 0.03
 
 const n_stars = 50
 
@@ -534,6 +535,7 @@ const star_init = (id, M, Z) => {
     ([aα, 5.5], [aβ, 11])
     ([aγ, 0], [1, 3], [aδ, 5], [aε, 7], [aζ, 8], [aη, 9.5])
   }
+  check($.L.ZAMS)
   
   // (T2)
   {
@@ -543,7 +545,6 @@ const star_init = (id, M, Z) => {
   }
   check($.R.ZAMS)
   
-  check($.L.ZAMS)
   
   // [5.1] Main-sequence and Hertzsprung gap
   
@@ -556,8 +557,8 @@ const star_init = (id, M, Z) => {
   check($.t.BGB)
   
   // (H5, H6, H7)
+  check($.t.BGB)
   {
-    
     // (H7)
     const µ = max(0.5, 1 - 0.01 * max(a6 / (M**a7), a8 + a9/(M**a10)))
     
@@ -605,6 +606,99 @@ const star_init = (id, M, Z) => {
     $.L.BGB = $.L.BGB_(M)
   }
   check($.L.BGB)
+
+   // (H18)
+  $.η = (Z > 0.0009 || M < 10) ? 10 : 20
+  check($.η)
+
+  
+  // (H16)
+  {
+    const L_ = M => min(a34 / (M**a35), a36 / (M**a37))
+    
+    $.L.Δ = ( M < $.M.hook ) ? 0
+    : in_range($.M.hook, M, a33) ? L_(a33)*(((M - $.M.hook)/(a33 - $.M.hook))**0.4)
+    : ( M > a33 ) ? L_(M)
+    : 0
+  }
+  check($.L.Δ)
+  
+  // (H17)
+  {
+    
+    const B = M => fit(M)([a38, 0], [a39, 3.5])([a40, 3], [1, a41]) - 1
+
+    $.R.Δ = ( M < $.M.hook ) ? 0
+    : in_range($.M.hook, M, a42) ? a43 * sqrt((M - $.M.hook)/(a42 - $.M.hook))
+    : in_range(a42, M, 2.0) ? a43 + (B(2.0) - a43)*(((M-a42)/(2-a42))**a44)
+    : ( M > 2.0 ) ? B(M)
+    : NaN
+  }
+  check($.R.Δ)
+  
+  // (H19)
+  {
+    
+    const B = M => fit(M)([a45, 0], [a46, a48])([1, 0.4], [a47, 1.9])
+    
+    $.L.α = ( M < 0.5) ? a49
+    : in_range(0.5, M, 0.7) ? a49 + 5.0*(0.3 - a49)*(M - 0.5)
+    : in_range(0.7, M, a52) ? 0.3 + (a50 - 0.3)*(M - 0.7)/(a52 - 0.7)
+    : in_range(a52, M, a53) ? a50 + (a51 - a50)*(M - a52)/(a53 - a52)
+    : in_range(a53, M, 2.0) ? a51 + (B(2.0) - a51)*(M - a53)/(2.0 - a53)
+    : ( M > 2.0 ) ? B(M)
+    : NaN
+  }
+  check($.L.α)
+  
+  // (H20)
+  {
+    const B = M => max(0.0, a54 - a55*(M**a56))
+    $.L.β = (M > a57 && B(M) > 0.0) ? max(0.0, B(a57) - 10.0*B(a57)*(M-a57))
+    : B(M)
+  }
+  check($.L.β)
+  
+  // (H21)
+  {        
+    const B = M => fit(M)([a58, a60])([a59, a61])
+    const a64 = (_a68 > a66) ? B(a66) : _a64
+    
+    $.R.α = in_range(a66, M, a67) ? B(M)
+    : (M < 0.5) ? a62
+    : in_range(0.5, M, 0.65) ? a62 + (a63-a62)*(M-0.5) / 0.15
+    : in_range(0.65, M, a68) ? a63 + (a64-a63)*(M-0.65) / (a68 - 0.65)
+    : in_range(a68, M, a66) ? a64 + (B(a66) - a64)*(M - a68) / (a66 - a68)
+    : (M > a67) ? B(a67) + a65*(M - a67)
+    : NaN
+  }
+  check($.R.α)
+  
+  // (H22)
+  {
+    
+    const B = M => fit(M)([a69, 3.5])([a70, 0], [1, a71])
+    const _β = (M < 1.0) ? 1.06
+    : in_range(1.0, M, a74) ? 1.06 + (a72 - 1.06)*(M - 1.0)/(a74 - 1.06)
+    : in_range(a74, M, 2.0) ? a74 + (B(2.0) - a72)*(M - a74)/(2.0 - a74)
+    : in_range(2.0, M, 16.0) ? B(M)
+    : (M > 16.0) ? B(16.0) + a73*(M - 16.0)
+    : NaN
+    $.R.β = 1 - _β
+  }
+  check($.R.β)
+  
+  // (H23)
+  {
+    const B = M => a76 + a77*((M-a78)**a79)
+    const C = (a75 < 1.0) ? C = B(1.0) : a80
+    $.R.γ = (M > a75 + 0.1) ? 0.0
+    : (M <= 1.0) ? B(M)
+    : in_range(1.0, M, a75) ? B(1.0) + (a80 - B(1.0))*(((M-1.0)/(a75-1.0))**a81)
+    : in_range(a75, M, a75+1.0) ? C - 10.0*(M-a75)*C
+    : NaN
+  }
+  check($.R.γ)
   
   // (H11, H12, H13, H14, H15, H24)
   {
@@ -639,97 +733,6 @@ const star_init = (id, M, Z) => {
     // (H15)
     $.τ.MS_2_ = t => clamp(0.0, (t - (1.0 - ε)*$.t.hook)/(ε * $.t.hook), 1.0)
   }
-  
-  // (H16)
-  {
-    const L_ = M => min(a34 / (M**a35), a36 / (M**a37))
-    
-    $.L.Δ = ( M < $.M.hook ) ? 0
-    : in_range($.M.hook, M, a33) ? L_(a33)*(((M - $.M.hook)/(a33 - $.M.hook))**0.4)
-    : ( M > a33 ) ? L_(M)
-    : 0
-  }
-  check($.L.Δ)
-  
-  // (H17)
-  {
-    
-    const B = M => fit(M)([a38, 0], [a39, 3.5])([a40, 3], [1, a41]) - 1
-
-    $.R.Δ = ( M < $.M.hook ) ? 0
-    : in_range($.M.hook, M, a42) ? a43 * sqrt((M - $.M.hook)/(a42 - $.M.hook))
-    : in_range(a42, M, 2.0) ? a43 + (B(2.0) - a43)*(((M-a42)/(2-a42))**a44)
-    : ( M > 2.0 ) ? B(M)
-    : 0.0
-  }
-  check($.R.Δ)
-
-   // (H18)
-  $.η = (Z > 0.0009 || M < 10) ? 10 : 20
-  check($.η)
-  
-  // (H19)
-  {
-    
-    const B = M => fit(M)([a45, 0], [a46, a48])([1, 0.4], [a47, 1.9])
-    
-    $.L.α = ( M < 0.5) ? a49
-    : in_range(0.5, M, 0.7) ? a49 + 5.0*(0.3 - a49)*(M - 0.5)
-    : in_range(0.7, M, a52) ? 0.3 + (a50 - 0.3)*(M - 0.7)/(a52 - 0.7)
-    : in_range(a52, M, a53) ? a50 + (a51 - a50)*(M - a52)/(a53 - a52)
-    : in_range(a53, M, 2.0) ? a51 + (B(2.0) - a51)*(M - a53)/(2.0 - a53)
-    : ( M > 2.0 ) ? B(M)
-    : 0.0
-  }
-  check($.L.α)
-  
-  // (H20)
-  {
-    const B = M => max(0.0, a54 - a55*(M**a56))
-    
-    $.L.β = (M > a57 && B(M) > 0.0) ? max(0.0, B(a57) - 10.0*B(a57)*(M-a57))
-    : B(M)
-  }
-  check($.L.β)
-  
-  // (H21)
-  {        
-    const B = M => fit(M)([a58, a60])([a59, a61])
-    const a64 = (_a68 > a66) ? B(a66) : _a64
-    
-    $.R.α = in_range(a66, M, a67) ? B(M)
-    : (M < 0.5) ? a62
-    : in_range(0.5, M, 0.65) ? a62 + (a63-a62)*(M-0.5) / 0.15
-    : in_range(0.65, M, a68) ? a63 + (a64-a63)*(M-0.65) / (a68 - 0.65)
-    : in_range(a68, M, a66) ? a64 + (B(a66) - a64)*(M - a68) / (a66 - a68)
-    : (M > a67) ? B(a67) + a65*(M - a67)
-    : 0.0
-  }
-  check($.R.α)
-  
-  // (H22)
-  {
-    
-    const B = M => fit(M)([a69, 3.5])([a70, 0], [1, a71])
-    $.R.β = (M < 1.0) ? 1.06
-    : in_range(1.0, M, a74) ? 1.06 + (a72 - 1.06)*(M - 1.0)/(a74 - 1.06)
-    : in_range(a74, M, 2.0) ? a74 + (B(2.0) - a72)*(M - a74)/(2.0 - a74)
-    : (M > 16.0) ? B(16.0) + a73*(M - 16.0)
-    : 0.0
-  }
-  check($.R.β)
-  
-  // (H23)
-  {
-    const B = M => a76 + a77*((M-a78)**a79)
-    const C = (a75 < 1.0) ? C = B(1.0) : a80
-    $.R.γ = (M > a75 + 0.1) ? 0.0
-    : (M <= 1.0) ? B(M)
-    : in_range(1.0, M, a75) ? B(1.0) + (a80 - B(1.0))*(((M-1.0)/(a75-1.0))**a81)
-    : in_range(a75, M, a75+1.0) ? C - 10.0*(M-a75)*C
-    : 0.0
-  }
-  check($.R.γ)
 
    // (H49, H50)
   {
@@ -751,7 +754,7 @@ const star_init = (id, M, Z) => {
     $.R.HeI_ = Mc => (M < $.M.FGB) ? $.R.GB_($.L.HeI)
     : (M > max($.M.FGB, 12.0)) ? $.R.mHe_(Mc)
     : in_range($.M.FGB, M, 12.0) ? $.R.mHe * (($.R.GB_($.L.HeI) / $.R.mHe_(Mc)) ** µ)
-    : 0.0
+    : NaN
 
     // (H p.6)
     $.L.EHG = (M < $.M.FGB) ? $.L.BGB : $.L.HeI
@@ -1229,7 +1232,7 @@ for(let i = 0; i < n_stars;){
   const test_mass = random_range(min_mass, max_mass)
   if(initial_mass_function(mass) < initial_mass_function(test_mass)) continue
   
-  const metallicity = 0.02
+  const metallicity = 0.02 //random_range(min_metal, max_metal)
   
   star_init(i, mass, metallicity)
   i++
@@ -1325,15 +1328,14 @@ const $time_slider = document.getElementById("time-slider")
 const $time_number = document.getElementById("time-number")
 let time = 0
 let then = 0
-const retime = event => {
-  time = parseInt(event.target.value)
-}
-$time_slider.addEventListener("input", retime)
-$time_number.addEventListener("input", retime)
+
+$time_slider.addEventListener("input", e => time = exp10(parseFloat(e.target.value)) - 1)
+$time_number.addEventListener("input", e => time = parseFloat(e.target.value))
 const draw = async (now) => {
-  time += (now-then)/100
+  time += (now-then)/1000
   then = now
-  $time_number.value = $time_slider.value = time.toFixed(2)
+  $time_slider.value = log10(1 + time).toFixed(2)
+  $time_number.value = time.toFixed(2)
   await Promise.all(Object.keys(stars).map(id => star_update(id, time)))
   chart.update()
   requestAnimationFrame(draw)
