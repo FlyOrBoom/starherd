@@ -22,7 +22,8 @@ html, body {
   <body>
     <canvas id="hr"></canvas>
     <label>
-      <input id="time" type="number" min="0" max="1e8" value="0" step="1">
+      <input id="time-slider" type="range" min="0" max="1e5" value="0" step="1" style="width: 95vw">
+      <input id="time-number" type="number" min="0" max="1e5" value="0" step="1">
       <span> million years</span>
     </label>
     <h1>Starherd</h1>
@@ -146,15 +147,15 @@ const fit = x => (...numerator) => (...denominator) =>
 const from_coefficients = x => (...coefficients) =>
   coefficients.map(polynomial(x))
 
-let min_bv = -0.5, max_bv = +3
+let min_bv = +3, max_bv = -0.5
 let min_temp = bv_to_temp(min_bv), max_temp = bv_to_temp(max_bv)
-
+console.log(max_temp)
 let min_mag = +10, max_mag = -20
 let min_sol_lum = abs_mag_to_sol_lum(min_mag), max_sol_lum = abs_mag_to_sol_lum(max_mag)
 
 let min_mass = 0.1, max_mass = 10
 
-const n_stars = 100
+const n_stars = 50
 
 const display = true
 
@@ -754,7 +755,7 @@ const star_init = (id, M, Z) => {
 
     // (H p.6)
     $.L.EHG = (M < $.M.FGB) ? $.L.BGB : $.L.HeI
-    $.R.EHG_ = Mc => (M < $.M.FGB) ? $.R.BGB : $.R.HeI_(Mc)
+    $.R.EHG_ = Mc => (M < $.M.FGB) ? $.R.GB_($.L.BGB) : $.R.HeI_(Mc)
   }
   check($.L.HeI)
   check($.L.EHG)
@@ -868,7 +869,7 @@ const star_init = (id, M, Z) => {
     $.L.HG_ = τ => $.L.TMS * (($.L.EHG / $.L.TMS) ** τ)
 
     // (H27)
-    $.R.HG_ = (Mc, τ) => $.R.TMS * (($.R.EHG_(Mc) / $.R.TMS) ** τ)      
+    $.R.HG_ = (Mc, τ) => $.R.TMS * (($.R.EHG_(Mc) / $.R.TMS) ** τ)
 
     $.Mc.MS = 0.0
     
@@ -884,7 +885,7 @@ const star_init = (id, M, Z) => {
     $.Mc.TMS = ρ * $.Mc.EHG
 
     // (H30)
-    $.Mc.HG_ = τ => ((1-τ)*$._.ρ + τ) * $.Mc.EHG
+    $.Mc.HG_ = τ => ((1-τ)*ρ + τ) * $.Mc.EHG
   }
   check($.Mc.EHG)
   check($.Mc.TMS)
@@ -1153,7 +1154,7 @@ const star_update = (id, t) => {
       
       const L = $.L.HG_(τ)
       const R = $.R.HG_(Mc, τ)
-
+      
       $.L.now = L
       $.R.now = R
       $.border = "green"
@@ -1221,27 +1222,28 @@ const star_update = (id, t) => {
   borders[id] = $.border
 }
 
-for(let i = 0; i < n_stars; i++){
+for(let i = 0; i < n_stars;){
   const mass = random_range(min_mass, max_mass)
   
   // Reject unlikely masses
   const test_mass = random_range(min_mass, max_mass)
-  //if(initial_mass_function(mass) < initial_mass_function(test_mass)) continue
+  if(initial_mass_function(mass) < initial_mass_function(test_mass)) continue
   
   const metallicity = 0.02
   
   star_init(i, mass, metallicity)
+  i++
 }
 
 Chart.defaults.color = '#ccc'
 Chart.defaults.borderColor = '#444'
 Chart.defaults.maintainAspectRatio = false
 
-Chart.register(ChartDataLabels)
+//Chart.register(ChartDataLabels)
 
 const chart = new Chart(canvas, {
   type: 'bubble',
-  plugins: [ChartDataLabels],
+  //plugins: [ChartDataLabels],
   data: {
     datasets: [{
       label: 'Stars',
@@ -1268,9 +1270,9 @@ const chart = new Chart(canvas, {
     scales: {
       x: {
         type: 'logarithmic',
-        title: { display, text: 'Surface temperature (Kelvins)' },
+        title: { display, text: 'Effective temperature (Kelvins)' },
         position: 'top',
-        min: max_temp, max: min_temp,
+        min: min_temp, max: max_temp,
         reverse: true,
         ticks: { 
           callback: value => classes[value] + "0: " + value,
@@ -1283,7 +1285,7 @@ const chart = new Chart(canvas, {
         type: 'linear',
         title: { display, text: 'Blue light versus visible light (B−V index)' },
         position: 'bottom',
-        min: min_bv, max: max_bv,
+        min: max_bv, max: min_bv,
         grid: { drawOnChartArea: true },
       },
       // x2: {
@@ -1319,10 +1321,19 @@ const chart = new Chart(canvas, {
   }
 })
 
-const $time = document.getElementById("time")
+const $time_slider = document.getElementById("time-slider")
+const $time_number = document.getElementById("time-number")
+let time = 0
+let then = 0
+const retime = event => {
+  time = parseInt(event.target.value)
+}
+$time_slider.addEventListener("input", retime)
+$time_number.addEventListener("input", retime)
 const draw = async (now) => {
-  const time = 50*now/1000
-  $time.value = time.toFixed(2)
+  time += (now-then)/100
+  then = now
+  $time_number.value = $time_slider.value = time.toFixed(2)
   await Promise.all(Object.keys(stars).map(id => star_update(id, time)))
   chart.update()
   requestAnimationFrame(draw)
