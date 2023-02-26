@@ -42,9 +42,11 @@ const canvas = document.getElementById('hr')
 // Math
 const random_range = (a, b) => a + (b - a) * Math.random()
 const in_range = (a, x, b) => (a <= x) && (x <= b)
-const log10 = (x) => Math.log(x)/Math.log(10.0)
+const ln = (x) => Math.log(x)
+const log10 = (x) => ln(x)/ln(10.0)
 const exp = (x) => Math.exp(x)
 const exp10 = (x) => Math.pow(10, x)
+const abs = (x) => Math.abs(x)
 const max = (a,b) => Math.max(a,b)
 const min = (a,b) => Math.min(a,b)
 const clamp = (a,x,b) => min(max(x,a),b)
@@ -56,6 +58,8 @@ const check = (x, ...obj) => isFinite(x) || console.error("check:", x, ...obj)
 const sqrt = (x) => Math.sqrt(x)
 const cbrt = (x) => Math.cbrt(x)
 const int_range = (n) => Array(n).fill(0).map((_, i) => i)
+const from_interval = (interval, value) => 
+  interval[Object.keys(interval).find(k => parseInt(k) > value)]
 
 // Constants
 const PI = Math.PI
@@ -64,6 +68,20 @@ const L_sun = 3.86e+26 // watts
 const R_sun = 6.9634e+8 // meters
 const Z_sun = 0.02
 const A_H = 1.44e-5 // rate of hydrogen fusion in CNO cycle
+
+
+const blackbody = {
+  1000:"#ff3800",1200:"#ff5300",1400:"#ff6500",1600:"#ff7300",1800:"#ff7e00",2000:"#ff8912",2200:"#ff932c",2400:"#ff9d3f",2600:"#ffa54f",2800:"#ffad5e",3000:"#ffb46b",3200:"#ffbb78",3400:"#ffc184",3600:"#ffc78f",3800:"#ffcc99",4000:"#ffd1a3",4200:"#ffd5ad",4400:"#ffd9b6",4600:"#ffddbe",4800:"#ffe1c6",5000:"#ffe4ce",5200:"#ffe8d5",5400:"#ffebdc",5600:"#ffeee3",5800:"#fff0e9",6000:"#fff3ef",6200:"#fff5f5",6400:"#fff8fb",6600:"#fef9ff",6800:"#f9f6ff",7000:"#f5f3ff",7200:"#f0f1ff",7400:"#edefff",7600:"#e9edff",7800:"#e6ebff",8000:"#e3e9ff",8200:"#e0e7ff",8400:"#dde6ff",8600:"#dae4ff",8800:"#d8e3ff",9000:"#d6e1ff",9200:"#d3e0ff",9400:"#d1dfff",9600:"#cfddff",9800:"#cedcff",10000:"#ccdbff",10200:"#cadaff",10400:"#c9d9ff",10600:"#c7d8ff",10800:"#c6d8ff",11000:"#c4d7ff",11200:"#c3d6ff",11400:"#c2d5ff",11600:"#c1d4ff",11800:"#c0d4ff",12000:"#bfd3ff",12200:"#bed2ff",12400:"#bdd2ff",12600:"#bcd1ff",12800:"#bbd1ff",13000:"#bad0ff",13200:"#b9d0ff",13400:"#b8cfff",13600:"#b7cfff",13800:"#b7ceff",14000:"#b6ceff",14200:"#b5cdff",14400:"#b5cdff",14600:"#b4ccff",14800:"#b3ccff",15000:"#b3ccff",15200:"#b2cbff",15400:"#b2cbff",15600:"#b1caff",15800:"#b1caff",16000:"#b0caff",16200:"#afc9ff",16400:"#afc9ff",16600:"#afc9ff",16800:"#aec9ff",17000:"#aec8ff",17200:"#adc8ff",17400:"#adc8ff",17600:"#acc7ff",17800:"#acc7ff",18000:"#acc7ff",18200:"#abc7ff",18400:"#abc6ff",18600:"#aac6ff",18800:"#aac6ff",19000:"#aac6ff",19200:"#a9c6ff",19400:"#a9c5ff",19600:"#a9c5ff",19800:"#a9c5ff",20000:"#a8c5ff",20200:"#a8c5ff",20400:"#a8c4ff",20600:"#a7c4ff",20800:"#a7c4ff",21000:"#a7c4ff",21200:"#a7c4ff",21400:"#a6c3ff",21600:"#a6c3ff",21800:"#a6c3ff",22000:"#a6c3ff",22200:"#a5c3ff",22400:"#a5c3ff",22600:"#a5c3ff",22800:"#a5c2ff",23000:"#a4c2ff",23200:"#a4c2ff",23400:"#a4c2ff",23600:"#a4c2ff",23800:"#a4c2ff",24000:"#a3c2ff",24200:"#a3c1ff",24400:"#a3c1ff",24600:"#a3c1ff",24800:"#a3c1ff",25000:"#a3c1ff",25200:"#a2c1ff",25400:"#a2c1ff",25600:"#a2c1ff",25800:"#a2c1ff",26000:"#a2c0ff",26200:"#a2c0ff",26400:"#a1c0ff",26600:"#a1c0ff",26800:"#a1c0ff",27000:"#a1c0ff",27200:"#a1c0ff",27400:"#a1c0ff",27600:"#a1c0ff",27800:"#a0c0ff",28000:"#a0bfff",28200:"#a0bfff",28400:"#a0bfff",28600:"#a0bfff",28800:"#a0bfff",29000:"#a0bfff",29200:"#a0bfff",29400:"#9fbfff",29600:"#9fbfff",29800:"#9fbfff",temp:1e10,col:"#9fbfff"
+}
+const classes = {
+  2400: "M",
+  3700: "K",
+  5200: "G",
+  6000: "F",
+  7500: "A",
+  10000: "B",
+  30000: "O",
+}
 
 // Conversions
 const abs_mag_to_sol_lum = (M) => 
@@ -75,17 +93,7 @@ const bv_to_temp = (i) =>
 const radius_lum_to_temp = (R, L) => 
   ( L*L_sun / ((4*PI*R*R*R_sun*R_sun) * STEFAN) ) ** (1/4)
   
-const temp_to_col = (T) => {
-  const blackbody = [
-   {temp:1000,col:"#ff3800"},{temp:1200,col:"#ff5300"},{temp:1400,col:"#ff6500"},
-   {temp:1600,col:"#ff7300"},{temp:1800,col:"#ff7e00"},{temp:2000,col:"#ff8912"},
-   {temp:2200,col:"#ff932c"},{temp:2400,col:"#ff9d3f"},{temp:2600,col:"#ffa54f"},
-   {temp:2800,col:"#ffad5e"},{temp:3000,col:"#ffb46b"},{temp:3200,col:"#ffbb78"},{
-    temp:3400,col:"#ffc184"},{temp:3600,col:"#ffc78f"},{temp:3800,col:"#ffcc99"},
-    {temp:4000,col:"#ffd1a3"},{temp:4200,col:"#ffd5ad"},{temp:4400,col:"#ffd9b6"},{temp:4600,col:"#ffddbe"},{temp:4800,col:"#ffe1c6"},{temp:5000,col:"#ffe4ce"},{temp:5200,col:"#ffe8d5"},{temp:5400,col:"#ffebdc"},{temp:5600,col:"#ffeee3"},{temp:5800,col:"#fff0e9"},{temp:6000,col:"#fff3ef"},{temp:6200,col:"#fff5f5"},{temp:6400,col:"#fff8fb"},{temp:6600,col:"#fef9ff"},{temp:6800,col:"#f9f6ff"},{temp:7000,col:"#f5f3ff"},{temp:7200,col:"#f0f1ff"},{temp:7400,col:"#edefff"},{temp:7600,col:"#e9edff"},{temp:7800,col:"#e6ebff"},{temp:8000,col:"#e3e9ff"},{temp:8200,col:"#e0e7ff"},{temp:8400,col:"#dde6ff"},{temp:8600,col:"#dae4ff"},{temp:8800,col:"#d8e3ff"},{temp:9000,col:"#d6e1ff"},{temp:9200,col:"#d3e0ff"},{temp:9400,col:"#d1dfff"},{temp:9600,col:"#cfddff"},{temp:9800,col:"#cedcff"},{temp:10000,col:"#ccdbff"},{temp:10200,col:"#cadaff"},{temp:10400,col:"#c9d9ff"},{temp:10600,col:"#c7d8ff"},{temp:10800,col:"#c6d8ff"},{temp:11000,col:"#c4d7ff"},{temp:11200,col:"#c3d6ff"},{temp:11400,col:"#c2d5ff"},{temp:11600,col:"#c1d4ff"},{temp:11800,col:"#c0d4ff"},{temp:12000,col:"#bfd3ff"},{temp:12200,col:"#bed2ff"},{temp:12400,col:"#bdd2ff"},{temp:12600,col:"#bcd1ff"},{temp:12800,col:"#bbd1ff"},{temp:13000,col:"#bad0ff"},{temp:13200,col:"#b9d0ff"},{temp:13400,col:"#b8cfff"},{temp:13600,col:"#b7cfff"},{temp:13800,col:"#b7ceff"},{temp:14000,col:"#b6ceff"},{temp:14200,col:"#b5cdff"},{temp:14400,col:"#b5cdff"},{temp:14600,col:"#b4ccff"},{temp:14800,col:"#b3ccff"},{temp:15000,col:"#b3ccff"},{temp:15200,col:"#b2cbff"},{temp:15400,col:"#b2cbff"},{temp:15600,col:"#b1caff"},{temp:15800,col:"#b1caff"},{temp:16000,col:"#b0caff"},{temp:16200,col:"#afc9ff"},{temp:16400,col:"#afc9ff"},{temp:16600,col:"#afc9ff"},{temp:16800,col:"#aec9ff"},{temp:17000,col:"#aec8ff"},{temp:17200,col:"#adc8ff"},{temp:17400,col:"#adc8ff"},{temp:17600,col:"#acc7ff"},{temp:17800,col:"#acc7ff"},{temp:18000,col:"#acc7ff"},{temp:18200,col:"#abc7ff"},{temp:18400,col:"#abc6ff"},{temp:18600,col:"#aac6ff"},{temp:18800,col:"#aac6ff"},{temp:19000,col:"#aac6ff"},{temp:19200,col:"#a9c6ff"},{temp:19400,col:"#a9c5ff"},{temp:19600,col:"#a9c5ff"},{temp:19800,col:"#a9c5ff"},{temp:20000,col:"#a8c5ff"},{temp:20200,col:"#a8c5ff"},{temp:20400,col:"#a8c4ff"},{temp:20600,col:"#a7c4ff"},{temp:20800,col:"#a7c4ff"},{temp:21000,col:"#a7c4ff"},{temp:21200,col:"#a7c4ff"},{temp:21400,col:"#a6c3ff"},{temp:21600,col:"#a6c3ff"},{temp:21800,col:"#a6c3ff"},{temp:22000,col:"#a6c3ff"},{temp:22200,col:"#a5c3ff"},{temp:22400,col:"#a5c3ff"},{temp:22600,col:"#a5c3ff"},{temp:22800,col:"#a5c2ff"},{temp:23000,col:"#a4c2ff"},{temp:23200,col:"#a4c2ff"},{temp:23400,col:"#a4c2ff"},{temp:23600,col:"#a4c2ff"},{temp:23800,col:"#a4c2ff"},{temp:24000,col:"#a3c2ff"},{temp:24200,col:"#a3c1ff"},{temp:24400,col:"#a3c1ff"},{temp:24600,col:"#a3c1ff"},{temp:24800,col:"#a3c1ff"},{temp:25000,col:"#a3c1ff"},{temp:25200,col:"#a2c1ff"},{temp:25400,col:"#a2c1ff"},{temp:25600,col:"#a2c1ff"},{temp:25800,col:"#a2c1ff"},{temp:26000,col:"#a2c0ff"},{temp:26200,col:"#a2c0ff"},{temp:26400,col:"#a1c0ff"},{temp:26600,col:"#a1c0ff"},{temp:26800,col:"#a1c0ff"},{temp:27000,col:"#a1c0ff"},{temp:27200,col:"#a1c0ff"},{temp:27400,col:"#a1c0ff"},{temp:27600,col:"#a1c0ff"},{temp:27800,col:"#a0c0ff"},{temp:28000,col:"#a0bfff"},{temp:28200,col:"#a0bfff"},{temp:28400,col:"#a0bfff"},{temp:28600,col:"#a0bfff"},{temp:28800,col:"#a0bfff"},{temp:29000,col:"#a0bfff"},{temp:29200,col:"#a0bfff"},{temp:29400,col:"#9fbfff"},{temp:29600,col:"#9fbfff"},{temp:29800,col:"#9fbfff"},{temp:1e10,col:"#9fbfff"}
-  ]
-  return (blackbody.find(({temp})=> temp > T) || {col: "green"}).col
-}
+const temp_to_col = (T) => from_interval(blackbody, T)
 
 // Probability density function of stars' initial masses
 const initial_mass_function = M => (
@@ -101,9 +109,9 @@ const phases = {
   MS: { name: "Main sequence above 0.7 M", index: 1, },
   HG: { name: "Hertzsprung Gap", index: 2, },
   GB: { name: "First Giant Branch", index: 3, },
-  CHe_B: { name: "Core Helium Burning", index: 4, },
-  EA_GB: { name: "Early Asymptotic Giant Branch", index: 5, },
-  TAP_GB: { name: "Thermally Pulsating Asymptotic Giant Branch", index: 6, },
+  CHeB: { name: "Core Helium Burning", index: 4, },
+  EAGB: { name: "Early Asymptotic Giant Branch", index: 5, },
+  TAPGB: { name: "Thermally Pulsating Asymptotic Giant Branch", index: 6, },
   He_MS: { name: "Naked Helium Star Main Sequence", index: 7, },
   He_HG: { name: "Naked Helium Star Hertzsprung Gap", index: 8, },
   He_GB: { name: "Naked Helium Star Giant Branch", index: 9, },
@@ -113,6 +121,12 @@ const phases = {
   NS: { name: "Neutron Star", index: 13, },
   BH: { name: "Black Hole", index: 14, },
   R: { name: "massless remnant", index: 15, },
+}
+
+const regimes = {
+  LM: { name: "Low mass", index: 0, },
+  IM: { name: "Intermediate mass", index: 1, },
+  HM: { name: "High mass", index: 2, },
 }
 
 const polynomial = x => coefficients => 
@@ -139,7 +153,7 @@ let min_sol_lum = abs_mag_to_sol_lum(min_mag), max_sol_lum = abs_mag_to_sol_lum(
 
 let min_mass = 0.1, max_mass = 10
 
-const n_stars = 50
+const n_stars = 100
 
 const display = true
 
@@ -193,8 +207,16 @@ const star_init = (id, M, Z) => {
     // the maximum initial mass for which He ignites on the first giant branch
     $.M.FGB = 13.048 * ((Z/0.02)**0.06) / (1 + 0.0012*((0.02/Z)**1.27))
 
+    // (H p.5)
+    $.L_I_H = (low, intermediate, high) => (M < $.M.HeF) ? low
+    : in_range($.M.HeF, M, $.M.FGB) ? intermediate
+    : high
+
+    $.L_IH = (low, other) => $.L_I_H(low, other, other)
+    $.LI_H = (other, high) => $.L_I_H(other, other, high)
+
     // where the mass of the convective envelope MCE first exceeds a set fraction of the envelope mass ME
-    $.ratio_CE_E = (M < $.M.HeF) ? (2/5) : (1/3)
+    $.ratio_CE_E = $.L_IH(2/5, 1/3)
   }
   check($.M.hook)
   check($.M.HeF)
@@ -205,7 +227,17 @@ const star_init = (id, M, Z) => {
 
   // (T p.2)
   
-  const [ aa, ab, ac, ad, ae, af, ag, ah, ai ] = $.from_coefficients(
+  const [ aα, aβ, aγ, aδ, aε, aζ, aη ] = $.from_coefficients(
+    [ 0.3970417, -0.32913574, 0.34776688, 0.37470851, 0.09011915 ],
+    [ 8.527626, -24.41225973, 56.43597107, 37.06152575, 5.4562406 ],
+    [ 0.00025546, -0.00123461, -0.00023246, 0.00045519, 0.00016176 ],
+    [ 5.432889, -8.62157806, 13.44202049, 14.51584135, 3.39793084 ],
+    [ 5.563579, -10.32345224, 19.4432298, 18.97361347, 4.16903097 ],
+    [ 0.7886606, -2.90870942, 6.54713531, 4.05606657, 0.53287322 ],
+    [ 0.00586685, -0.01704237, 0.03872348, 0.02570041, 0.00383376 ]
+  )
+  
+  const [ aθ, aι, aκ, aλ, aμ, aν, aξ, aο, aπ ] = $.from_coefficients(
     [ 1.715359, 0.62246212, -0.92557761, -1.16996966, -0.30631491 ], 
     [ 6.597788, -0.42450044, -12.13339427, -10.73509484, -2.51487077 ],
     [ 10.08855, -7.11727086, -31.67119479, -24.24848322, -5.33608972 ],
@@ -217,15 +249,6 @@ const star_init = (id, M, Z) => {
     [ 0.00022582, -0.00186899, 0.00388783, 0.00142402, -0.00007671 ]
   ) 
   
-  const [ ba, bb, bc, bd, be, bf, bg ] = $.from_coefficients(
-    [ 0.3970417, -0.32913574, 0.34776688, 0.37470851, 0.09011915 ],
-    [ 8.527626, -24.41225973, 56.43597107, 37.06152575, 5.4562406 ],
-    [ 0.00025546, -0.00123461, -0.00023246, 0.00045519, 0.00016176 ],
-    [ 5.432889, -8.62157806, 13.44202049, 14.51584135, 3.39793084 ],
-    [ 5.563579, -10.32345224, 19.4432298, 18.97361347, 4.16903097 ],
-    [ 0.7886606, -2.90870942, 6.54713531, 4.05606657, 0.53287322 ],
-    [ 0.00586685, -0.01704237, 0.03872348, 0.02570041, 0.00383376 ]
-  )
     
   // (H p.24)
   
@@ -495,7 +518,7 @@ const star_init = (id, M, Z) => {
   const b55 = min(_b55, 0.99164 - 743.123*(Z**2.83))
   const b56 = _b56 + 0.1140142 * ($.ζ ** 5)
   const b57 = _b57 - 0.01308728 * ($.ζ ** 5)
-  
+    
   // END COEFFICIENTS
     
   $.fit = fit($.M.ZAMS)
@@ -503,20 +526,21 @@ const star_init = (id, M, Z) => {
   
   // Zero-age main sequence mass and radius
   
-  // (T2)
-  {
-    $.R.ZAMS = $.fit
-    ([aa, 2.5], [ab, 6.5], [ac, 11], [ad, 19], [ae, 19.5])
-    ([af, 0], [ag, 2], [ah, 8.5], [1, 18.5], [ai, 19.5])
-  }
-  check($.R.ZAMS)
-  
   // (T1)
   {
     $.L.ZAMS = $.fit
-    ([ba, 5.5], [bb, 11])
-    ([bc, 0], [1, 3], [bd, 5], [be, 7], [bf, 8], [bg, 9.5])
+    ([aα, 5.5], [aβ, 11])
+    ([aγ, 0], [1, 3], [aδ, 5], [aε, 7], [aζ, 8], [aη, 9.5])
   }
+  
+  // (T2)
+  {
+    $.R.ZAMS = $.fit
+    ([aθ, 2.5], [aι, 6.5], [aκ, 11], [aλ, 19], [aμ, 19.5])
+    ([aν, 0], [aξ, 2], [aο, 8.5], [1, 18.5], [aπ, 19.5])
+  }
+  check($.R.ZAMS)
+  
   check($.L.ZAMS)
   
   // [5.1] Main-sequence and Hertzsprung gap
@@ -712,8 +736,11 @@ const star_init = (id, M, Z) => {
     const α1 = (b9*($.M.HeF**b10) - B($.M.HeF)) / B($.M.HeF)
     
     // (H49)
-    $.L.HeI = (M < $.M.HeF) ? (b9 * (M**b10)) / (1 + α1*exp(15*(M - $.M.HeF))) 
-    : B(M)
+    $.L.HeI_ = M => $.L_IH(
+      (b9 * (M**b10)) / (1 + α1*exp(15*(M - $.M.HeF))),
+      B(M)
+    )
+    $.L.HeI = $.L.HeI_(M)
     
     // (H50b)
     const µ = log10(M/12.0) / log10($.M.FGB/12.0)
@@ -736,60 +763,8 @@ const star_init = (id, M, Z) => {
     $.Mc.BAGB = (b36 * (M**b37) + b38) ** (1/4)
   }
   check($.Mc.BAGB)
-  
-  // (H44)
-  {
-    const c1 = 9.20925e-5
-    const c2 = 5.402216
-    const C_ = Mc => Mc*($.L.BGB_($.M.HeF) ** 4) - c1*($.M.HeF ** c2)
 
-    // (H44)
-    $.Mc.BGB_ = Mc => min(
-      0.95 * $.Mc.BAGB, 
-      ( C_(Mc) + c1*(M**c2) ) ** (1/4)
-    )
-  }
-  
-  // (H45)
-  {
-    // (H p.11)
-    $.τ.GB_ = t => (t - $.t.BGB) / ($.t.HeI - $.t.BGB)
-    
-    // (H45)
-    $.Mc.GB_ = (t, τ) => (M > $.M.HeF) ? $.Mc.BGB + ($.Mc.HeI - $.Mc.BGB) * τ
-    : $.Mc.GB_1_(t)
-  }
-  
-  // (H25, H26, H27, H28, H29, H30) 
-  {
-    // (H25)
-    $.τ.HG_ = t => (t - $.t.MS) / ($.t.BGB - $.t.MS)
-    
-    // (H26)
-    $.L.HG_ = τ => $.L.TMS * (($.L.EHG / $.L.TMS) ** τ)
 
-    // (H27)
-    $.R.HG_ = (Mc, τ) => $.R.TMS * (($.R.EHG_(Mc) / $.R.TMS) ** τ)      
-
-    $.Mc.MS = 0.0
-    
-    // (H28)
-    $.Mc.EHG = (M < $.M.HeF) ? $.Mc.BGB // $.Mc.GB
-    : in_range($.M.HeF, M, $.M.FGB) ? $.Mc.BGB
-    : ($.M.FGF < M) ? $.Mc.HeI
-    : 0.0
-    
-    // (H29)
-    const ρ = (1.586 + (M**5.25)) / (2.434 + 1.02*(M**5.25))
-    $.Mc.TMS = ρ * $.Mc.EHG
-
-    // (H30)
-    $.Mc.HG_ = τ => ((1-τ)*$._.ρ + τ) * $.Mc.EHG
-  }
-  
-  // [5.2] First giant branch
-
-  
   // (H34, H37, H38, H39, H40, H41, H42, H43)
   {    
     // (H p.10)
@@ -804,6 +779,10 @@ const star_init = (id, M, Z) => {
     const A_H = exp10(
       max(-4.8, min(-5.7 + 0.8*M, -4.1 + 0.14*M))
     )
+    
+    // (H31)
+    $.Mc.L_ = Mc => D * (Mc**p)
+    $.L.Mc_ = L => (L/D) ** (1/p)
     
     // (H34)
     const Mc_ = (p, D, t_inf) => t =>
@@ -855,6 +834,72 @@ const star_init = (id, M, Z) => {
       * ((D/$.L.HeI)**((q-1)/q))
     $.t.HeI = ($.L.HeI < Lx) ? t1 : t2
   }
+  check($.t.HeI)
+  
+  // (H44)
+  {
+    const c1 = 9.20925e-5
+    const c2 = 5.402216
+    const C_BCB = ($.Mc.L_($.L.BGB_($.M.HeF)) ** 4) - c1*($.M.HeF ** c2)
+
+    // (H44)
+    $.Mc.BGB = min(
+      0.95 * $.Mc.BAGB, 
+      ( C_BCB + c1*(M**c2) ) ** (1/4)
+    )
+
+    const C_HeI = ($.Mc.L_($.L.HeI_($.M.HeF)) ** 4) - c1*($.M.HeF ** c2)
+
+    // (H p.13)
+    $.Mc.HeI = $.L_IH(
+      $.Mc.L_($.L.HeI),
+      ( C_HeI + c1*(M**c2) ) ** (1/4)
+    )
+  }
+  check($.Mc.HeI)
+  
+  // (H25, H26, H27, H28, H29, H30) 
+  {
+    // (H25)
+    $.τ.HG_ = t => (t - $.t.MS) / ($.t.BGB - $.t.MS)
+    
+    // (H26)
+    $.L.HG_ = τ => $.L.TMS * (($.L.EHG / $.L.TMS) ** τ)
+
+    // (H27)
+    $.R.HG_ = (Mc, τ) => $.R.TMS * (($.R.EHG_(Mc) / $.R.TMS) ** τ)      
+
+    $.Mc.MS = 0.0
+    
+    // (H28)
+    $.Mc.EHG =  $.L_I_H(
+      $.Mc.BGB, // $.Mc.GB
+      $.Mc.BGB,
+      $.Mc.HeI
+    )
+    
+    // (H29)
+    const ρ = (1.586 + (M**5.25)) / (2.434 + 1.02*(M**5.25))
+    $.Mc.TMS = ρ * $.Mc.EHG
+
+    // (H30)
+    $.Mc.HG_ = τ => ((1-τ)*$._.ρ + τ) * $.Mc.EHG
+  }
+  check($.Mc.EHG)
+  check($.Mc.TMS)
+  
+  // [5.2] First giant branch
+  
+  
+  // (H45)
+  {
+    // (H p.11)
+    $.τ.GB_ = t => (t - $.t.BGB) / ($.t.HeI - $.t.BGB)
+    
+    // (H45)
+    $.Mc.GB_ = (t, τ) => (M > $.M.HeF) ? $.Mc.BGB + ($.Mc.HeI - $.Mc.BGB) * τ
+    : $.Mc.GB_1_(t)
+  }
   
   // (H46)
   {
@@ -876,6 +921,7 @@ const star_init = (id, M, Z) => {
       ([b16, 0], [1, b15])
     $.L.min_He = $.L.min_He_(M)
   }
+  check($.L.min_He)
   
   // (H77, H78)
   {
@@ -890,6 +936,29 @@ const star_init = (id, M, Z) => {
       ([0.2391, 4.6])
       ([1, 4], [0.162, 3], [0.0065, 0])
     $.R.ZHe = $.R.ZHe_(M)
+  }
+  check($.L.ZHe)
+  check($.R.ZHe)
+  
+  // (H79)
+  {
+    $.t.HeMS_ = M => fit(M)
+      ([0.4129, 0], [18.81, 4], [1.853, 6])
+      ([1, 6.5])
+    $.t.HeMS = $.t.HeMS_(M)
+  }
+  
+  // (H74)
+  {
+    
+    const M1 = $.M.HeF - 0.2
+    const M2 = $.M.HeF
+    const A1_ = M => b56 + b57*M
+    const A2_ = M => min(b51 * (M**-b52), b53 * (M**-b54))
+    $.R.AGB_ = L => $.lerp(M1, M2)( 
+      $.R.GB__( A1_(max(M1, M)) )(L), 
+      $.R.GB__( A2_(min(M, M2)) )(L)
+    )
   }
   
   // (H52, H53, H54, H55)
@@ -917,27 +986,11 @@ const star_init = (id, M, Z) => {
       
     const R1 = R_(M)
     const R2_ = Mc => $.R.GB_($.L.ZAHB_(Mc))
-      *((B_($.M.HeF) / $.R.GB_($.L.ZAHB__($.M.HeF)(Mc))) ** $._.µ)
+      *((R_($.M.HeF) / $.R.GB_($.L.ZAHB__($.M.HeF)(Mc))) ** $._.µ)
 
     // (H55)
     $.R.mHe_ = Mc => (M > $.M.HeF) ? R1 : R2_(Mc)
-  }
-  
-  // (H74)
-  {
     
-    const M1 = $.M.HeF - 0.2
-    const M2 = $.M.HeF
-    const A1_ = M => b56 + b57*M
-    const A2_ = M => min(b51 * (M**-b52), b53 * (M**-b54))
-    $.R.AGB_ = L => $.lerp(M1, M2)( 
-      $.R.GB__( A1_(max(M1, M)) )(L), 
-      $.R.GB__( A2_(min(M, M2)) )(L)
-    )
-  }
-  
-  // (H56)
-  {
     
     const L_ = M => fit(M)
       ([b31, 0], [b32, b33+1.8])
@@ -950,19 +1003,105 @@ const star_init = (id, M, Z) => {
     : (b29 * (M**b30)) / (1 + α3 * exp(15 * M - $.M.HeF))
     
     $.R.BAGB = $.R.AGB_($.L.BAGB)
+    
+    const t_ = M => $.tBGB * $.fit
+      ([b41, b42], [b43, 5])
+      ([b44, 0], [1, 5])
+      
+    const α4 = (t_($.M.HeF) - b39)/b39
+      
+    // (H57)
+    $.t.He_ = Mc => $.L_IH(
+      (b39 + ($.t.HeMS_(Mc) - b39) * ((1 - µ_(Mc))**b40))
+      * (1 + α4*exp(15 * (M - $.M.HeF))),
+      t_(M)
+    )
+  }
+  check($.L.BAGB)
+  check($.R.BAGB)
+  
+  // (H58, H59, H60)
+  {
+    $.τ.CHeB_ = t => (t - $.t.HeI) / $.t.He
+   
+    // (H58c)
+    const α_bl =
+      (1 - b45*(($.M.HeF/$.M.FGB)**0.414)) 
+      * (log10($.M.HeF/$.M.FGB)**-b46)
+    
+    // (H58b)
+    const f_bl_ = M => 
+      (M**b48) 
+      * ((1 - $.R.mHe_(M)/$.R.AGB_($.L.HeI)) ** b49)
+    const f_bl = f_bl_(M)
+
+    // (H58a)
+    const τ_bl = $.L_I_H(
+      1.0,
+      b45*((M/$.M.FGB)**0.414) + α_bl*(log10(M/$.M.FGB)**b46),
+      (1-b47) * f_bl_(M) / f_bl_($.M.FGB)
+    )
+    
+    // (H p.12)
+    const τx = $.L_I_H(0, 1 - τ_bl, 0)
+    
+    // (H59)
+    const Lx_ = Mc => $.L_I_H(
+      $.L.ZAHB_(Mc),
+      $.L.min_He,
+      $.L.HeI
+    )
+
+    // (H60)
+    const Rx_ = Mc => $.L_I_H(
+      $.R.ZAHB_(Mc),
+      $.R.GB_($.L.min_He),
+      $.R.HeI_(Mc)
+    )
+    
+    // (H62b)
+    const ξ_ = Mc => min(2.5, max(0.4, $.R.mHe_(Mc) / Rx_(Mc)))
+    
+    // (H62)
+    const λ_ = (Mc, τ) => ((τ - τx) / (1 - τx)) ** ξ_(Mc)
+    
+    // (H63)
+    const _λ_ = (Mc, τ) => ((τx - τ) / τx) ** 3
+    
+    // (H61)
+    $.L.CHeB_ = (Mc, τ) => 
+      in_range(τx, τ, 1) ? Lx_(Mc) * (($.L.BAGB/Lx_(Mc))**λ_(Mc)) 
+      : Lx_(Mc) * (($.L.HeI/Lx_(Mc)) ** _λ_(Mc))
+    
+    const Rmin_ = Mc => min($.R.mHe_(Mc), Rx_(Mc))
+    
+    const τy = $.LI_H(1, τ_bl)
+    const Ly = $.LI_H($.L.BAGB, NaN)
+    const Ry = $.R.AGB_(Ly)
+    
+    // (H65)
+    const ρ_ = (Mc, τ) => 
+      (ln(Ry / Rmin_(Mc)) ** (1/3)) * ((τ-τx)/(τy - τx))
+      - (ln(Rx / Rmin_(Mc)) ** (1/3)) * ((τy - τ)/(τy - τx))
+    
+    // (H64)
+    $.R.CHeB_ = (Mc, τ) =>
+      in_range(0, τ, τx) ? $.R.GB_(L_(Mc, τ))
+      : in_range(τy, τ, 1) ? $.R.AGB_(L_(Mc, τ))
+      : in_range(τx, τ, τy) ? Rmin_(Mc) * exp(abs(ρ_(Mc, τ)) ** 3)
+      : NaN
+    
+    // (H66)
+    $.Mc.BAGB = (b36*(M**b37) + b38) ** (1/4)
+    
+    // (H67)
+    $.Mc.CHeB_ = τ => mix($.Mc.HeI, $.Mc.BAGB, τ)
   }
   
-  // (H59, H60)
   {
-    $.L.x_ = Mc => (M < $.M.HeF) ? $.L.ZAHB_(Mc)
-    : in_range($.M.HeF, M, $.M.FGB) ? $.L.min_He
-    : (M > $.M.FGB) ? $.L.HeI
-    : 0.0
-
-    $.R.x = (M < $.M.HeF) ? $.R.ZAHB
-    : in_range($.M.HeF, M, $.M.FGB) ? $.R.GB_($.L.min_He)
-    : (M > $.M.FGB) ? $.R.HeI
-    : 0.0
+    // (H p.13)
+    
+    $.t.BAGB = $.t.HeI + $.t.He_($.Mc.CO)
   }
  
   $.bubble = {}
@@ -970,7 +1109,6 @@ const star_init = (id, M, Z) => {
   
   stars[id] = $
   star_update(id, 0)
-  //console.log(JSON.stringify($,"",2))
 }
 
 const bubbles = []
@@ -982,6 +1120,8 @@ const star_update = (id, t) => {
   const phase = in_range(0, t, $.t.MS) ? ($.M < 0.7 ? phases.C_MS : phases.MS)
   : in_range($.t.MS, t, $.t.BGB) ? phases.HG
   : in_range($.t.BGB, t, $.t.HeI) ? phases.GB
+  : in_range($.t.HeI, t, $.t.BAGB) ? phases.CHeB
+  : in_range($.t.BAGB, t, $.t.DU) ? phases.EAGB
   : phases.R
   
  // relative time
@@ -994,11 +1134,11 @@ const star_update = (id, t) => {
       const τ1 = $.τ.MS_1_(t)
       const τ2 = $.τ.MS_2_(t)
       
-      $.L.MS = $.L.MS_(τ, τ1, τ2)
-      $.R.MS = $.R.MS_(τ, τ1, τ2)
+      const L = $.L.MS_(τ, τ1, τ2)
+      const R = $.R.MS_(τ, τ1, τ2)
 
-      $.L.now = $.L.MS
-      $.R.now = $.R.MS
+      $.L.now = L
+      $.R.now = R
       $.border = "white"
       $.opacity = "ff"
       break
@@ -1010,11 +1150,11 @@ const star_update = (id, t) => {
       
       const Mc = $.Mc.HG_(τ)
       
-      $.L.HG = $.L.HG_(τ)
-      $.R.HG = $.R.HG_(Mc, τ)
+      const L = $.L.HG_(τ)
+      const R = $.R.HG_(Mc, τ)
 
-      $.L.now = $.L.HG
-      $.R.now = $.R.HG
+      $.L.now = L
+      $.R.now = R
       $.border = "green"
       $.opacity = "ff"
       break
@@ -1024,12 +1164,26 @@ const star_update = (id, t) => {
       
       const Mc = $.Mc.GB_(t, τ)
 
-      $.L.GB = $.L.GB_(τ)
-      $.R.GB = $.R.GB_($.L.GB)   
+      const L = $.L.GB_(τ)
+      const R = $.R.GB_(L)  
       
-      $.R.now = $.R.GB
-      $.L.now = $.L.GB
+      $.R.now = R
+      $.L.now = L
       $.border = "blue"
+      $.opacity = "88"
+      break
+    }
+    case phases.CHeB: {
+      const τ = $.τ.CHeB_(t)
+      
+      const Mc = $.Mc.CHeB_(τ)
+      
+      const L = $.L.CHeB_(Mc, τ)
+      const R = $.R.CHeB_(Mc, τ)
+      
+      $.L.now = L
+      $.R.now = R
+      $.border = "pink"
       $.opacity = "88"
       break
     }
@@ -1048,8 +1202,10 @@ const star_update = (id, t) => {
       break
     }
   }
-  //if(phase.index < 15) console.log(phase)
-  //console.log(JSON.stringify($.t,"",2))
+  if(phase.index < 15) {
+    //console.log(phase)
+    //console.log(JSON.stringify($,"",2))
+  }
  
   $.T.now = radius_lum_to_temp($.R.now, $.L.now)
   $.color = temp_to_col($.T.now)
@@ -1057,6 +1213,7 @@ const star_update = (id, t) => {
   $.bubble.x = $.T.now
   $.bubble.y = $.L.now
   $.bubble.r = $.R.now*4
+  $.bubble.mass = $.M.ZAMS.toPrecision(2)
   
   bubbles[id] = $.bubble
   colors[id] = $.color + $.opacity
@@ -1079,8 +1236,11 @@ Chart.defaults.color = '#ccc'
 Chart.defaults.borderColor = '#444'
 Chart.defaults.maintainAspectRatio = false
 
+Chart.register(ChartDataLabels)
+
 const chart = new Chart(canvas, {
   type: 'bubble',
+  plugins: [ChartDataLabels],
   data: {
     datasets: [{
       label: 'Stars',
@@ -1088,19 +1248,34 @@ const chart = new Chart(canvas, {
       backgroundColor: colors,
       borderColor: borders,
       borderWidth: 1
-    }]
+    }],
   },
   options: {
-    clip: false,
+    clip: 0,
     animation: { duration: 0 },
     borderColor: "white",
+    plugins: {
+      datalabels: {
+        align: "top",
+        offset: 10,
+        formatter: bubble => bubble.mass
+      }
+    },
+    layout: {
+      autoPadding: false,
+    },
     scales: {
       x: {
-        type: 'linear',
+        type: 'logarithmic',
         title: { display, text: 'Surface temperature (Kelvins)' },
         position: 'top',
         min: max_temp, max: min_temp,
         reverse: true,
+        ticks: { 
+          callback: value => classes[value] + "0: " + value,
+          minRotation: 30
+        },
+        afterBuildTicks: axis => axis.ticks = Object.keys(classes).map(v => ({ value: parseInt(v) })),
         grid: { drawOnChartArea: false },
       },
       x1: {
@@ -1110,9 +1285,15 @@ const chart = new Chart(canvas, {
         min: min_bv, max: max_bv,
         grid: { drawOnChartArea: true },
       },
+      // x2: {
+      //   type: 'category',
+      //   position: 'top',
+      //   labels: Object.values(classes),
+      //   reverse: true,
+      // },
       y: {
         type: 'logarithmic',
-        title: { display, text: 'Luminosity in Suns eL⊙,' },
+        title: { display, text: 'Luminosity in Suns (L⊙)' },
         display: true,
         position: 'right',
         min: min_sol_lum, max: max_sol_lum,
@@ -1138,12 +1319,10 @@ const chart = new Chart(canvas, {
 })
 
 const $time = document.getElementById("time")
-const draw = (now) => {
+const draw = async (now) => {
   const time = 50*now/1000
   $time.value = time.toFixed(2)
-  for(const id in stars) {
-    star_update(id, time)
-  }
+  await Promise.all(Object.keys(stars).map(id => star_update(id, time)))
   chart.update()
   requestAnimationFrame(draw)
 }
