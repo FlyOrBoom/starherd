@@ -106,11 +106,11 @@ const temp_to_rgb = (T) => {
   return [red, green, blue].map(c => clamp(0, c, 255))
 }
 // Probability density function of stars' initial masses
+// Kroupa 2001
 const initial_mass_function = M => (
-  in_range(0.08, M, 0.50) ? 0.035 * Math.pow(M, -1.3)
-  : in_range (0.50, M, 1.00) ? 0.019 * Math.pow(M, -2.2)
-  : in_range (1.00, M, 100) ? 0.019 * Math.pow(M, -2.7)
-  : 0
+  (M < 0.08) ? (M ** -0.3)
+  : in_range (0.08, M, 0.5) ? (M ** -1.3)
+  : (M ** -2.3)
 )
 
 // Zeta function of metallicity Z
@@ -164,7 +164,7 @@ let min_temp = bv_to_temp(min_bv), max_temp = bv_to_temp(max_bv)
 let min_mag = +10, max_mag = -20
 let min_sol_lum = abs_mag_to_sol_lum(min_mag), max_sol_lum = abs_mag_to_sol_lum(max_mag)
 
-let min_mass = 0.1, max_mass = 20
+let min_mass = 0.05, max_mass = 20
 let min_metal = 0.01, max_metal = 0.03
 
 const n_stars = 100
@@ -1364,7 +1364,7 @@ for(let i = 0; i < n_stars;){
   
   // Reject unlikely masses
   const test_mass = random_range(min_mass, max_mass)
-  //if(initial_mass_function(mass) < initial_mass_function(test_mass)) continue
+  if(initial_mass_function(mass) < initial_mass_function(test_mass)) continue
   
   const metallicity = random_range(min_metal, max_metal)
   
