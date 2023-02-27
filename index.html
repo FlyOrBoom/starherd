@@ -1,4 +1,3 @@
-
 <html>
   <head>
     <title>Starherd</title>
@@ -23,8 +22,9 @@ html, body {
   <body>
     <canvas id="hr"></canvas>
     <label>
-      <input id="time-slider" type="range" min="0" max="5" value="0" step="1e-5" style="width: 95vw">
-      <input id="time-number" type="number" min="0" max="1e5" value="1e-2" step="1">
+      <input id="time-pause" type="checkbox">
+      <input id="time-slider" type="range" min="0" max="6" value="0" step="1e-5" style="width: 95vw">
+      <input id="time-number" type="number" min="0" max="1e6" value="1e-2" step="1">
       <span> million years</span>
     </label>
     <h1>Starherd</h1>
@@ -38,6 +38,7 @@ html, body {
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.2.1"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
     <script>
+
 "use strict"
 
 const canvas = document.getElementById('hr')
@@ -70,7 +71,7 @@ const STEFAN = 5.670374419e-8
 const L_sun = 3.86e+26 // watts
 const R_sun = 6.9634e+8 // meters
 const Z_sun = 0.02
-const A_H = 1.44e-5 // rate of hydrogen fusion in CNO cycle
+const M_chandra = 1.44 // chandrasekhar limit
 
 
 const classes = {
@@ -119,12 +120,16 @@ const phases = {
   HG: { name: "Hertzsprung Gap", index: 2, },
   GB: { name: "First Giant Branch", index: 3, },
   CHeB: { name: "Core Helium Burning", index: 4, },
-  EAGB: { name: "Early Asymptotic Giant Branch", index: 5, },
+  EAGB: { 
+    index: 5, 
+    name: "Early Asymptotic Giant Branch", 
+    description: "Extinct H-burning shell surrounding an H-exhausted core, where degenerate CO is beginning to grow."
+  },
   TAPGB: { name: "Thermally Pulsating Asymptotic Giant Branch", index: 6, },
-  He_MS: { name: "Naked Helium Star Main Sequence", index: 7, },
-  He_HG: { name: "Naked Helium Star Hertzsprung Gap", index: 8, },
-  He_GB: { name: "Naked Helium Star Giant Branch", index: 9, },
-  He_WD: { name: "Helium White Dwarf", index: 10, },
+  // He_MS: { name: "Naked Helium Star Main Sequence", index: 7, },
+  // He_HG: { name: "Naked Helium Star Hertzsprung Gap", index: 8, },
+  // He_GB: { name: "Naked Helium Star Giant Branch", index: 9, },
+  // He_WD: { name: "Helium White Dwarf", index: 10, },
   CO_WD: { name: "Carbon/Oxygen White Dwarf", index: 11, },
   ONe_WD: { name: "Oxygen/Neon White Dwarf", index: 12, },
   NS: { name: "Neutron Star", index: 13, },
@@ -217,20 +222,31 @@ const star_init = (id, M, Z) => {
     $.M.FGB = 13.048 * ((Z/0.02)**0.06) / (1 + 0.0012*((0.02/Z)**1.27))
 
     // (H p.5)
-    $.L_I_H = (low, intermediate, high) => (M < $.M.HeF) ? low
-    : in_range($.M.HeF, M, $.M.FGB) ? intermediate
-    : high
-
-    $.L_IH = (low, other) => $.L_I_H(low, other, other)
-    $.LI_H = (other, high) => $.L_I_H(other, other, high)
+    $.regimes = ({ LM, IM, HM, LM_IM, IM_HM }) => 
+      (M < $.M.HeF) ? (LM ?? LM_IM)
+      : in_range($.M.HeF, M, $.M.FGB) ? (IM ?? LM_IM ?? IM_HM)
+      : (HM ?? IM_HM)
 
     // where the mass of the convective envelope MCE first exceeds a set fraction of the envelope mass ME
-    $.ratio_CE_E = $.L_IH(2/5, 1/3)
+    $.ratio_CE_E = $.regimes({ LM: 2/5, IM_HM: 1/3 })
   }
   check($.M.hook)
   check($.M.HeF)
   check($.M.FGB)
   check($.ratio_CE_E)
+  
+  // (H p.10)
+  // rate of hydrogen fusion
+  const A_H = exp10(
+    max(-4.8, min(-5.7 + 0.8*M, -4.1 + 0.14*M))
+  )
+  
+  // (H p.13)
+  // rate of helium fusion
+  const A_He = 7.66e-5
+  
+  // combined rate
+  const A_H_He = (A_H * A_He) / (A_H + A_He)
   
   // BEGIN COEFFICIENTS
 
@@ -554,17 +570,19 @@ const star_init = (id, M, Z) => {
   
   // [5.1] Main-sequence and Hertzsprung gap
   
-  // (H4)
+
+  // (H66)
+  {
+    $.Mc.BAGB = (b36 * (M**b37) + b38) ** (1/4)
+  }
+  check($.Mc.BAGB)
+  
+  // (H4, H5, H6, H7)
   {
     $.t.BGB = $.fit
     ([a1, 0], [a2, 4], [a3, 5.5], [1, 7])
     ([a4, 2], [a5, 7])
-  }
-  check($.t.BGB)
-  
-  // (H5, H6, H7)
-  check($.t.BGB)
-  {
+
     // (H7)
     const µ = max(0.5, 1 - 0.01 * max(a6 / (M**a7), a8 + a9/(M**a10)))
     
@@ -576,6 +594,7 @@ const star_init = (id, M, Z) => {
     // (H5)
     $.t.MS = max($.t.hook, x * $.t.BGB)
   }
+  check($.t.BGB)
   check($.t.hook)
   check($.t.MS)
   
@@ -606,10 +625,10 @@ const star_init = (id, M, Z) => {
     const c2 = 9.301992
     const c3 = 4.637345
     
-    $.L.BGB_ = M => fit(M)
+    $.L.BGB_ = ({ M }) => fit(M)
       ([a27, a31], [a28, c2])
       ([a29, 0], [a30, c3], [1, a32])
-    $.L.BGB = $.L.BGB_(M)
+    $.L.BGB = $.L.BGB_({ M })
   }
   check($.L.BGB)
 
@@ -620,24 +639,24 @@ const star_init = (id, M, Z) => {
   
   // (H16)
   {
-    const L_ = M => min(a34 / (M**a35), a36 / (M**a37))
+    const L_ = ({ M }) => min(a34 / (M**a35), a36 / (M**a37))
     
     $.L.Δ = ( M < $.M.hook ) ? 0
-    : in_range($.M.hook, M, a33) ? L_(a33)*(((M - $.M.hook)/(a33 - $.M.hook))**0.4)
-    : ( M > a33 ) ? L_(M)
-    : 0
+    : in_range($.M.hook, M, a33) ? L_({ M: a33 })*(((M - $.M.hook)/(a33 - $.M.hook))**0.4)
+    : ( M > a33 ) ? L_({ M })
+    : NaN
   }
   check($.L.Δ)
   
   // (H17)
   {
     
-    const B = M => fit(M)([a38, 0], [a39, 3.5])([a40, 3], [1, a41]) - 1
+    const B = ({ M }) => fit(M)([a38, 0], [a39, 3.5])([a40, 3], [1, a41]) - 1
 
     $.R.Δ = ( M < $.M.hook ) ? 0
     : in_range($.M.hook, M, a42) ? a43 * sqrt((M - $.M.hook)/(a42 - $.M.hook))
-    : in_range(a42, M, 2.0) ? a43 + (B(2.0) - a43)*(((M-a42)/(2-a42))**a44)
-    : ( M > 2.0 ) ? B(M)
+    : in_range(a42, M, 2.0) ? a43 + (B({ M: 2.0 }) - a43)*(((M-a42)/(2-a42))**a44)
+    : ( M > 2.0 ) ? B({ M })
     : NaN
   }
   check($.R.Δ)
@@ -645,37 +664,38 @@ const star_init = (id, M, Z) => {
   // (H19)
   {
     
-    const B = M => fit(M)([a45, 0], [a46, a48])([1, 0.4], [a47, 1.9])
+    const B = ({ M }) => fit(M)([a45, 0], [a46, a48])([1, 0.4], [a47, 1.9])
     
     $.L.α = ( M < 0.5) ? a49
     : in_range(0.5, M, 0.7) ? a49 + 5.0*(0.3 - a49)*(M - 0.5)
     : in_range(0.7, M, a52) ? 0.3 + (a50 - 0.3)*(M - 0.7)/(a52 - 0.7)
     : in_range(a52, M, a53) ? a50 + (a51 - a50)*(M - a52)/(a53 - a52)
-    : in_range(a53, M, 2.0) ? a51 + (B(2.0) - a51)*(M - a53)/(2.0 - a53)
-    : ( M > 2.0 ) ? B(M)
+    : in_range(a53, M, 2.0) ? a51 + (B({ M: 2.0 }) - a51)*(M - a53)/(2.0 - a53)
+    : ( M > 2.0 ) ? B({ M })
     : NaN
   }
   check($.L.α)
   
   // (H20)
   {
-    const B = M => max(0.0, a54 - a55*(M**a56))
-    $.L.β = (M > a57 && B(M) > 0.0) ? max(0.0, B(a57) - 10.0*B(a57)*(M-a57))
-    : B(M)
+    const B = ({ M }) => max(0.0, a54 - a55*(M**a56))
+    $.L.β = (M > a57 && B({ M }) > 0.0) 
+    ? max(0.0, B({ M: a57 }) - 10.0*B({ M: a57 })*(M-a57))
+    : B({ M })
   }
   check($.L.β)
   
   // (H21)
   {        
-    const B = M => fit(M)([a58, a60])([a59, a61])
-    const a64 = (_a68 > a66) ? B(a66) : _a64
+    const B = ({ M }) => fit(M)([a58, a60])([a59, a61])
+    const a64 = (_a68 > a66) ? B({ M: a66 }) : _a64
     
-    $.R.α = in_range(a66, M, a67) ? B(M)
+    $.R.α = in_range(a66, M, a67) ? B({ M })
     : (M < 0.5) ? a62
     : in_range(0.5, M, 0.65) ? a62 + (a63-a62)*(M-0.5) / 0.15
     : in_range(0.65, M, a68) ? a63 + (a64-a63)*(M-0.65) / (a68 - 0.65)
-    : in_range(a68, M, a66) ? a64 + (B(a66) - a64)*(M - a68) / (a66 - a68)
-    : (M > a67) ? B(a67) + a65*(M - a67)
+    : in_range(a68, M, a66) ? a64 + (B({ M: a66 }) - a64)*(M - a68) / (a66 - a68)
+    : (M > a67) ? B({ M: a67 }) + a65*(M - a67)
     : NaN
   }
   check($.R.α)
@@ -683,12 +703,12 @@ const star_init = (id, M, Z) => {
   // (H22)
   {
     
-    const B = M => fit(M)([a69, 3.5])([a70, 0], [1, a71])
+    const B = ({ M }) => fit(M)([a69, 3.5])([a70, 0], [1, a71])
     const _β = (M < 1.0) ? 1.06
     : in_range(1.0, M, a74) ? 1.06 + (a72 - 1.06)*(M - 1.0)/(a74 - 1.06)
-    : in_range(a74, M, 2.0) ? a74 + (B(2.0) - a72)*(M - a74)/(2.0 - a74)
-    : in_range(2.0, M, 16.0) ? B(M)
-    : (M > 16.0) ? B(16.0) + a73*(M - 16.0)
+    : in_range(a74, M, 2.0) ? a74 + (B({ M: 2.0 }) - a72)*(M - a74)/(2.0 - a74)
+    : in_range(2.0, M, 16.0) ? B({ M })
+    : (M > 16.0) ? B({ M: 16.0 }) + a73*(M - 16.0)
     : NaN
     $.R.β = 1 - _β
   }
@@ -696,11 +716,11 @@ const star_init = (id, M, Z) => {
   
   // (H23)
   {
-    const B = M => a76 + a77*((M-a78)**a79)
-    const C = (a75 < 1.0) ? C = B(1.0) : a80
+    const B = ({ M }) => a76 + a77*((M-a78)**a79)
+    const C = (a75 < 1.0) ? C = B({ M: 1.0 }) : a80
     $.R.γ = (M > a75 + 0.1) ? 0.0
-    : (M <= 1.0) ? B(M)
-    : in_range(1.0, M, a75) ? B(1.0) + (a80 - B(1.0))*(((M-1.0)/(a75-1.0))**a81)
+    : (M <= 1.0) ? B({ M })
+    : in_range(1.0, M, a75) ? B({ M: 1.0 }) + (a80 - B({ M: 1.0 }))*(((M-1.0)/(a75-1.0))**a81)
     : in_range(a75, M, a75+1.0) ? C - 10.0*(M-a75)*C
     : NaN
   }
@@ -709,10 +729,10 @@ const star_init = (id, M, Z) => {
   // (H11, H12, H13, H14, H15, H24)
   {
     // (H11)
-    $.τ.MS_ = t => t / $.t.MS
+    $.τ.MS_ = ({ t }) => t / $.t.MS
 
     // (H12)
-    $.L.MS_ = (τ, τ1, τ2) => $.L.ZAMS * exp10(
+    $.L.MS_ = ({ τ, τ1, τ2 }) => $.L.ZAMS * exp10(
       $.L.α*(τ) 
       + $.L.β*(τ**$.η)
       + (log10($.L.TMS/$.L.ZAMS) - $.L.α - $.L.β)*(τ*τ)
@@ -720,7 +740,7 @@ const star_init = (id, M, Z) => {
     )
 
     // (H13, H24)
-    $.R.MS_ = (τ, τ1, τ2) => max(
+    $.R.MS_ = ({ τ, τ1, τ2 }) => max(
       $.R.ZAMS * exp10(
         $.R.α*(τ) 
         + $.R.β*(τ**10)
@@ -734,51 +754,164 @@ const star_init = (id, M, Z) => {
     const ε = 0.01
 
     // (H14)
-    $.τ.MS_1_ = t => min(1.0, t/$.t.hook)
+    $.τ.MS_1_ = ({ t }) => min(1.0, t/$.t.hook)
 
     // (H15)
-    $.τ.MS_2_ = t => clamp(0.0, (t - (1.0 - ε)*$.t.hook)/(ε * $.t.hook), 1.0)
+    $.τ.MS_2_ = ({ t }) => clamp(0.0, (t - (1.0 - ε)*$.t.hook)/(ε * $.t.hook), 1.0)
+  }
+
+    // (H46)
+  {
+    const A = min(b4 * (M**-b5), b6 * (M**-b7))
+    $.R.GB_ = ({ L }) => 
+      A * (L**b1 + b2*(L**b3))
+  }
+  
+  // (H74)
+  {   
+    const M1 = $.M.HeF - 0.2
+    const M2 = $.M.HeF
+    const A1_ = ({ M }) => b56 + b57*M
+    const A2_ = ({ M }) => min(b51 * (M**-b52), b53 * (M**-b54))
+    $.R.AGB_ = ({ L }) => $.lerp(M1, M2)( 
+      A1_({ M: max(M1, M) }) * ((L**b1) + b2*(L**(b55*b3))), 
+      A2_({ M: min(M, M2) }) * ((L**b1) + b2*(L**b3)), 
+    )
+  }
+
+
+  // (H77, H78)
+  {
+    // (H77)
+    $.L.ZHe_ = ({ M }) => $.fit
+      ([15262, 10.25])
+      ([1, 9], [29.54, 7.5], [31.18, 6], [0.0469, 0])
+    $.L.ZHe = $.L.ZHe_({ M })
+    
+    // (H78)
+    $.R.ZHe_ = ({ M }) => $.fit
+      ([0.2391, 4.6])
+      ([1, 4], [0.162, 3], [0.0065, 0])
+    $.R.ZHe = $.R.ZHe_({ M })
+  }
+  check($.L.ZHe)
+  check($.R.ZHe)
+  
+  // (H79)
+  {
+    $.t.HeMS_ = ({ M }) => fit(M)
+      ([0.4129, 0], [18.81, 4], [1.853, 6])
+      ([1, 6.5])
+    $.t.HeMS = $.t.HeMS_({ M })
   }
 
    // (H49, H50)
   {
     
-    const B = (M) => fit(M)([b11, 0], [b12, 3.8])([b13, 0], [1, 2])
-    const α1 = (b9*($.M.HeF**b10) - B($.M.HeF)) / B($.M.HeF)
+    const B = ({ M }) => fit(M)([b11, 0], [b12, 3.8])([b13, 0], [1, 2])
+    const α1 = (b9*($.M.HeF**b10) - B({ M: $.M.HeF })) / B({ M: $.M.HeF })
     
     // (H49)
-    $.L.HeI_ = M => $.L_IH(
-      (b9 * (M**b10)) / (1 + α1*exp(15*(M - $.M.HeF))),
-      B(M)
-    )
-    $.L.HeI = $.L.HeI_(M)
+    $.L.HeI_ = ({ M }) => $.regimes({
+      LM: (b9 * (M**b10)) / (1 + α1*exp(15*(M - $.M.HeF))),
+      IM_HM: B({ M })
+    })
+    $.L.HeI = $.L.HeI_({ M })
     
     // (H50b)
     const µ = log10(M/12.0) / log10($.M.FGB/12.0)
 
     // (H50a)
-    $.R.HeI_ = Mc => (M < $.M.FGB) ? $.R.GB_($.L.HeI)
-    : (M > max($.M.FGB, 12.0)) ? $.R.mHe_(Mc)
-    : in_range($.M.FGB, M, 12.0) ? $.R.mHe * (($.R.GB_($.L.HeI) / $.R.mHe_(Mc)) ** µ)
+    $.R.HeI_ = ({ Mc }) => (M < $.M.FGB) ? $.R.GB_({ L: $.L.HeI })
+    : (M > max($.M.FGB, 12.0)) ? $.R.mHe_({ Mc })
+    : in_range($.M.FGB, M, 12.0) ? $.R.mHe * (($.R.GB_({ L: $.L.HeI }) / $.R.mHe_({ Mc })) ** µ)
     : NaN
 
     // (H p.6)
     $.L.EHG = (M < $.M.FGB) ? $.L.BGB : $.L.HeI
-    $.R.EHG_ = Mc => (M < $.M.FGB) ? $.R.GB_($.L.BGB) : $.R.HeI_(Mc)
+    $.R.EHG_ = ({ Mc }) => (M < $.M.FGB) ? $.R.GB_({ L: $.L.BGB }) : $.R.HeI_({ Mc })
   }
   check($.L.HeI)
   check($.L.EHG)
-
-  // (H66)
-  {
-    $.Mc.BAGB = (b36 * (M**b37) + b38) ** (1/4)
+  
+  // (H51)
+  { 
+    const c = b17/($.M.FGB**0.1) + (b16*b17 - b14)/($.M.FGB**(b15 + 0.1))
+    $.L.min_He_ = ({ M }) => $.L.HeI * fit(M)
+      ([b14, 0], [c, b15+0.1])
+      ([b16, 0], [1, b15])
+    $.L.min_He = $.L.min_He_({ M })
   }
-  check($.Mc.BAGB)
+  check($.L.min_He)
+  
+  // (H52, H53, H54, H55)
+  {
+    const µ_ = ({ Mc }) => (M - Mc)/($.M.HeF - Mc)
+    
+    // (H53)
+    const α2_ = ({ Mc }) => 
+      (b18 + $.L.ZHe_({ M: Mc }) 
+      - $.L.min_He_({ M })) 
+      / ($.L.min_He_({ M: $.M.HeF }) - $.L.ZHe_({ M: Mc }))
+    
+    $.L.ZAHB_ = ({ M = $.M.ZAMS, Mc } = {}) => $.L.ZHe_({ Mc }) 
+      + ((1 + b20) / (1 + b20*(µ_({ Mc })**1.6479)))
+      * (b18 * (µ_({ Mc })**b19)) / (1 + α2_({ Mc }) * exp(15 * (M - $.M.HeF)))
 
+    // (H54)
+    const f_ = ({ Mc }) => 
+      ( (1.0 + b21) * (µ_({ Mc }) ** b22) ) 
+      / ( 1.0 + b21 * (µ_({ Mc }) ** b23) )
+      
+    $.R.ZAHB_ = ({ Mc }) => 
+      mix($.R.GB_({ L: $.L.ZAHB }), $.R.ZHe_({ Mc }))(f_({ Mc }))
+    
+    const R_ = ({ M }) => fit(M)
+      ([b24, 1], [b25**b26, b26+b28])
+      ([b27, 0], [1, b28])
+      
+    const R1 = R_({ M })
+    const R2_ = ({ Mc }) => $.R.GB_({ L: $.L.ZAHB_({ Mc }) })
+      *((R_({ M: $.M.HeF }) / $.R.GB_({ L: $.L.ZAHB_({ M: $.M.HeF, Mc }) })) ** µ_({ Mc }))
 
+    // (H55)
+    $.R.mHe_ = ({ Mc }) => (M > $.M.HeF) ? R1 : R2_({ Mc })
+    
+    
+    const L_ = ({ M }) => fit(M)
+      ([b31, 0], [b32, b33+1.8])
+      ([b34, 0], [1, b33])
+      
+    const α3 = 
+      ( b29 * ($.M.HeF**b30) - L_({ M: $.M.HeF }) ) 
+      / L_({ M: $.M.HeF })
+    
+    // (H56)
+    $.L.BAGB = (M > $.M.HeF) ? L_({ M })
+    : (b29 * (M**b30)) / (1 + α3 * exp(15 * M - $.M.HeF))
+    
+    $.R.BAGB = $.R.AGB_({ L: $.L.BAGB })
+    
+    const t_ = ({ M }) => $.t.BGB * fit(M)
+      ([b41, b42], [b43, 5])
+      ([b44, 0], [1, 5])
+      
+    const α4 = (t_({ M: $.M.HeF }) - b39)/b39
+
+    // (H57)
+    $.t.He_ = ({ Mc }) => $.regimes({
+      LM: (b39 + ($.t.HeMS_({ M: Mc }) - b39) * ((1 - µ_({ Mc }))**b40))
+        * (1 + α4*exp(15 * (M - $.M.HeF))),
+      IM_HM: t_({ M })
+    })
+  }
+  check($.L.BAGB)
+  check($.R.BAGB)
+  
+
+  // (H p.10)
   // (H34, H37, H38, H39, H40, H41, H42, H43)
-  {    
-    // (H p.10)
+  {
     const F = $.lerp($.M.HeF, 2.5)
     const p = F(6, 5)
     const q = F(3, 2)
@@ -787,63 +920,76 @@ const star_init = (id, M, Z) => {
     const D = exp10(F(
       D0, max(-1.0, max(0.975*D0 - 0.18*M, 0.5*D0 - 0.06*M))
     ))
-    const A_H = exp10(
-      max(-4.8, min(-5.7 + 0.8*M, -4.1 + 0.14*M))
-    )
     
     // (H31)
-    $.Mc.L_ = Mc => D * (Mc**p)
-    $.L.Mc_ = L => (L/D) ** (1/p)
-    
-    // (H34)
-    const Mc_ = (p, D, t_inf) => t =>
-      ( (p-1) * A_H * D * (t_inf - t) ) ** ( 1 / (1-p) )
-
-    // (H38)
-    const Mx = (B/D)**(1/(p - q))
+    $.Mc.L_ = ({ L }) => (L/D) ** (1/p)
     
     // (H37)
-    // L at crossover point
-    const Lx = min(
-      B * (Mx**q),
-      D * (Mx**p)
-    )
+    $.L.Mc_ = ({ Mc }) => min(B * (Mc**q), D * (Mc**p))
+
+    $.general_giant = ({ A, ta, La, Lb, _t_inf_2}) => {
     
-    // (H40)
-    const t_inf_1 = $.t.BGB 
-      + (1/(A_H * D * (p-1)))
-      * ( (D/$.L.BGB)**((p-1)/p) )
+      // (H34)
+      const Mc__ = ({ p, D, t_inf, t }) =>
+        ( (p-1) * A * D * (t_inf - t) ) ** ( 1 / (1-p) )
 
-    // (H41)
-    // t at crossover point
-    const tx = t_inf_1
-      - (t_inf_1 - $.t.BGB) 
-      * ( ($.L.BGB/Lx) ** ((p-1)/p) )
-
-    // (H42)
-    const t_inf_2 = tx
-      + (1/(A_H * B * (q-1))) 
-      * ( (B/Lx) ** ((q-1)/q) )
-
-    // (H37)
-    $.L.GB_ = t => min(
-      B * (Mc_(p, B, t_inf_1)(t) ** q), 
-      D * (Mc_(q, D, t_inf_2)(t) ** p)
-    )
+      // (H38)
+      // crossover point
+      const Mx = (B/D)**(1/(p - q))    
+      const Lx = $.L.Mc_({ Mc: Mx })
     
-    // (H39)
-    $.Mc.GB_1_ = t => (
-      (t < tx) ? Mc_(p, D, t_inf_2) : Mc_(q, B, t_inf_2)
-    )(t)
-  
-    // (H43)  
-    const t1 = t_inf_1 
-      - (1/(A_H * D * (p-1)))
-      * ((D/$.L.HeI)**((p-1)/p))
-    const t2 = t_inf_2
-      - (1/(A_H * D * (q-1)))
-      * ((D/$.L.HeI)**((q-1)/q))
-    $.t.HeI = ($.L.HeI < Lx) ? t1 : t2
+      // (H40)
+      const t_inf_1 = ta
+        + (1/(A * D * (p-1)))
+        * ( (D/La)**((p-1)/p) )
+
+      // (H41)
+      // t at crossover point
+      const tx = t_inf_1
+        - (t_inf_1 - ta) 
+        * ( (La/Lx) ** ((p-1)/p) )
+
+      // (H42)
+      const t_inf_2 = _t_inf_2 ? _t_inf_2({ p, q, B, D }) 
+        : tx
+          + (1/(A * B * (q-1))) 
+          * ( (B/Lx) ** ((q-1)/q) )
+        
+      // (H37)
+      const L_ = ({ t }) => min(
+        B * (Mc__({ p: q, D: B, t_inf: t_inf_1, t }) ** q), 
+        D * (Mc__({ p: p, D: D, t_inf: t_inf_2, t }) ** p)
+      )
+
+      // (H39)
+      const Mc_ = ({ t }) => ( 
+        (t < tx) 
+        ? Mc__({ p: p, D: D, t_inf: t_inf_1, t })
+        : Mc__({ p: q, D: B, t_inf: t_inf_2, t })
+      )
+
+      // (H43)  
+      const tb1 = t_inf_1 
+        - (1/(A * D * (p-1)))
+        * ((D/Lb)**((p-1)/p))
+      const tb2 = t_inf_2
+        - (1/(A * B * (q-1)))
+        * ((B/Lb)**((q-1)/q))
+      const t = (Lb < Lx) ? tb1 : tb2
+        
+      return { L_, Mc_, t }
+    }
+  }
+
+  {
+    const { L_, Mc_, t } = $.general_giant({
+      A: A_H, ta: $.t.BGB, 
+      La: $.L.BGB, Lb: $.L.HeI
+    })
+    
+    $.L.GB_ = ({ t }) => L_({ t })
+    $.Mc.GB__ = ({ t }) => Mc_({ t })
+    $.t.HeI = t
   }
   check($.t.HeI)
   
@@ -851,7 +997,8 @@ const star_init = (id, M, Z) => {
   {
     const c1 = 9.20925e-5
     const c2 = 5.402216
-    const C_BCB = ($.Mc.L_($.L.BGB_($.M.HeF)) ** 4) - c1*($.M.HeF ** c2)
+    const C_BCB = ($.Mc.L_({ L: $.L.BGB_({ M: $.M.HeF }) }) ** 4) 
+      - c1*($.M.HeF ** c2)
 
     // (H44)
     $.Mc.BGB = min(
@@ -859,42 +1006,41 @@ const star_init = (id, M, Z) => {
       ( C_BCB + c1*(M**c2) ) ** (1/4)
     )
 
-    const C_HeI = ($.Mc.L_($.L.HeI_($.M.HeF)) ** 4) - c1*($.M.HeF ** c2)
+    const C_HeI = ($.Mc.L_({ L: $.L.HeI_({ M: $.M.HeF }) }) ** 4) - c1*($.M.HeF ** c2)
 
     // (H p.13)
-    $.Mc.HeI = $.L_IH(
-      $.Mc.L_($.L.HeI),
-      ( C_HeI + c1*(M**c2) ) ** (1/4)
-    )
+    $.Mc.HeI = $.regimes({
+      LM: $.Mc.L_({ L: $.L.HeI }),
+      IM_HM: ( C_HeI + c1*(M**c2) ) ** (1/4)
+    })
   }
   check($.Mc.HeI)
   
   // (H25, H26, H27, H28, H29, H30) 
   {
     // (H25)
-    $.τ.HG_ = t => (t - $.t.MS) / ($.t.BGB - $.t.MS)
+    $.τ.HG_ = ({ t }) => (t - $.t.MS) / ($.t.BGB - $.t.MS)
     
     // (H26)
-    $.L.HG_ = τ => $.L.TMS * (($.L.EHG / $.L.TMS) ** τ)
+    $.L.HG_ = ({ τ }) => $.L.TMS * (($.L.EHG / $.L.TMS) ** τ)
 
     // (H27)
-    $.R.HG_ = (Mc, τ) => $.R.TMS * (($.R.EHG_(Mc) / $.R.TMS) ** τ)
-
+    $.R.HG_ = ({ Mc, τ }) => $.R.TMS * (($.R.EHG_({ Mc }) / $.R.TMS) ** τ)
     $.Mc.MS = 0.0
     
     // (H28)
-    $.Mc.EHG =  $.L_I_H(
-      $.Mc.BGB, // $.Mc.GB
-      $.Mc.BGB,
-      $.Mc.HeI
-    )
+    $.Mc.EHG =  $.regimes({
+      LM: $.Mc.BGB, // $.Mc.GB
+      IM: $.Mc.BGB,
+      HM: $.Mc.HeI
+    })
     
     // (H29)
     const ρ = (1.586 + (M**5.25)) / (2.434 + 1.02*(M**5.25))
     $.Mc.TMS = ρ * $.Mc.EHG
 
     // (H30)
-    $.Mc.HG_ = τ => ((1-τ)*ρ + τ) * $.Mc.EHG
+    $.Mc.HG_ = ({ τ }) => ((1-τ)*ρ + τ) * $.Mc.EHG
   }
   check($.Mc.EHG)
   check($.Mc.TMS)
@@ -905,214 +1051,139 @@ const star_init = (id, M, Z) => {
   // (H45)
   {
     // (H p.11)
-    $.τ.GB_ = t => (t - $.t.BGB) / ($.t.HeI - $.t.BGB)
+    $.τ.GB_ = ({ t }) => (t - $.t.BGB) / ($.t.HeI - $.t.BGB)
     
     // (H45)
-    $.Mc.GB_ = (t, τ) => (M > $.M.HeF) ? $.Mc.BGB + ($.Mc.HeI - $.Mc.BGB) * τ
-    : $.Mc.GB_1_(t)
-  }
-  
-  // (H46)
-  {
-        
-    // (H46)
-    $.R.GB__ = (A) => (L) => A * (L**b1 + b2*(L**b3))
-    const A = min(b4 * (M**-b5), b6 * (M**-b7))
-    $.R.GB_ = (L) => $.R.GB__(A)(L)
+    $.Mc.GB_ = ({ t, τ }) => (M > $.M.HeF) ? $.Mc.BGB + ($.Mc.HeI - $.Mc.BGB) * τ
+    : $.Mc.GB__({ t })
   }
   
   // [5.3] Core helium burning
  
   
-  // (H51)
-  { 
-    const c = b17/($.M.FGB**0.1) + (b16*b17 - b14)/($.M.FGB**(b15 + 0.1))
-    $.L.min_He_ = M => $.L.HeI * fit(M)
-      ([b14, 0], [c, b15+0.1])
-      ([b16, 0], [1, b15])
-    $.L.min_He = $.L.min_He_(M)
-  }
-  check($.L.min_He)
   
-  // (H77, H78)
-  {
-    // (H77)
-    $.L.ZHe_ = M => $.fit
-      ([15262, 10.25])
-      ([1, 9], [29.54, 7.5], [31.18, 6], [0.0469, 0])
-    $.L.ZHe = $.L.ZHe_(M)
-    
-    // (H78)
-    $.R.ZHe_ = M => $.fit
-      ([0.2391, 4.6])
-      ([1, 4], [0.162, 3], [0.0065, 0])
-    $.R.ZHe = $.R.ZHe_(M)
-  }
-  check($.L.ZHe)
-  check($.R.ZHe)
-  
-  // (H79)
-  {
-    $.t.HeMS_ = M => fit(M)
-      ([0.4129, 0], [18.81, 4], [1.853, 6])
-      ([1, 6.5])
-    $.t.HeMS = $.t.HeMS_(M)
-  }
-  
-  // (H74)
-  {
-    
-    const M1 = $.M.HeF - 0.2
-    const M2 = $.M.HeF
-    const A1_ = M => b56 + b57*M
-    const A2_ = M => min(b51 * (M**-b52), b53 * (M**-b54))
-    $.R.AGB_ = L => $.lerp(M1, M2)( 
-      $.R.GB__( A1_(max(M1, M)) )(L), 
-      $.R.GB__( A2_(min(M, M2)) )(L)
-    )
-  }
-  
-  // (H52, H53, H54, H55)
-  {
-    const µ_ = Mc => (M - Mc)/($.M.HeF - Mc)
-    
-    // (H53)
-    const α2_ = Mc => 
-      (b18 + $.L.ZHe_(Mc) 
-      - $.L.min_He_(M)) 
-      / ($.L.min_He_($.M.HeF) - $.L.ZHe_(Mc))
-    
-    $.L.ZAHB__ = M => Mc => $.L.ZHe_(Mc) 
-      + ((1 + b20) / (1 + b20*(µ_(Mc)**1.6479)))
-      * (b18 * (µ_(Mc)**b19)) / (1 + α2_(M) * exp(15 * (M - $.M.HeF)))
-    $.L.ZAHB_ = $.L.ZAHB__(M)
-    
-    // (H54)
-    const f_ = Mc => ( (1.0 + b21) * (µ_(Mc) ** b22) ) / ( 1.0 + b21 * (µ_(Mc) ** b23) )
-    $.R.ZAHB_ = Mc => mix($.R.GB_($.L.ZAHB), $.R.Zhe_(Mc))(f_(Mc))
-    
-    const R_ = (M) => fit(M)
-      ([b24, 1], [b25**b26, b26+b28])
-      ([b27, 0], [1, b28])
-      
-    const R1 = R_(M)
-    const R2_ = Mc => $.R.GB_($.L.ZAHB_(Mc))
-      *((R_($.M.HeF) / $.R.GB_($.L.ZAHB__($.M.HeF)(Mc))) ** $._.µ)
-
-    // (H55)
-    $.R.mHe_ = Mc => (M > $.M.HeF) ? R1 : R2_(Mc)
-    
-    
-    const L_ = M => fit(M)
-      ([b31, 0], [b32, b33+1.8])
-      ([b34, 0], [1, b33])
-      
-    const α3 = ( b29 * ($.M.HeF**b30) - L_($.M.HeF) ) / L_($.M.HeF)
-    
-    // (H56)
-    $.L.BAGB = (M > $.M.HeF) ? L_(M)
-    : (b29 * (M**b30)) / (1 + α3 * exp(15 * M - $.M.HeF))
-    
-    $.R.BAGB = $.R.AGB_($.L.BAGB)
-    
-    const t_ = M => $.tBGB * $.fit
-      ([b41, b42], [b43, 5])
-      ([b44, 0], [1, 5])
-      
-    const α4 = (t_($.M.HeF) - b39)/b39
-      
-    // (H57)
-    $.t.He_ = Mc => $.L_IH(
-      (b39 + ($.t.HeMS_(Mc) - b39) * ((1 - µ_(Mc))**b40))
-      * (1 + α4*exp(15 * (M - $.M.HeF))),
-      t_(M)
-    )
-  }
-  check($.L.BAGB)
-  check($.R.BAGB)
   
   // (H58, H59, H60)
   {
-    $.τ.CHeB_ = t => (t - $.t.HeI) / $.t.He
+    $.τ.CHeB_ = ({ t }) => (t - $.t.HeI) / $.t.He_({ Mc: $.Mc.HeI })
    
     // (H58c)
-    const α_bl =
-      (1 - b45*(($.M.HeF/$.M.FGB)**0.414)) 
-      * (log10($.M.HeF/$.M.FGB)**-b46)
+    // original formulation raised a negative number to a fraction.
+    // merged that part dircetly to H58b to avoid issues
+    const α_bl = (1 - b45*(($.M.HeF/$.M.FGB)**0.414)) 
     
     // (H58b)
-    const f_bl_ = M => 
+    const f_bl_ = ({ M }) => 
       (M**b48) 
-      * ((1 - $.R.mHe_(M)/$.R.AGB_($.L.HeI)) ** b49)
-    const f_bl = f_bl_(M)
+      * ((1 - $.R.mHe_({ M })/$.R.AGB_({ L: $.L.HeI })) ** b49)
+    const f_bl = f_bl_({ M })
 
     // (H58a)
-    const τ_bl = $.L_I_H(
-      1.0,
-      b45*((M/$.M.FGB)**0.414) + α_bl*(log10(M/$.M.FGB)**b46),
-      (1-b47) * f_bl_(M) / f_bl_($.M.FGB)
-    )
+    const τ_bl = $.regimes({
+      LM: 1.0,
+      IM: b45*((M/$.M.FGB)**0.414) + α_bl*(( ln(M/$.M.FGB) / ln($.M.HeF/$.M.FGB) )**b46),
+      HM: (1-b47) * f_bl_({ M }) / f_bl_({ M: $.M.FGB })
+    })
     
     // (H p.12)
-    const τx = $.L_I_H(0, 1 - τ_bl, 0)
+    const τx = $.regimes({ LM: 0, IM: 1 - τ_bl, HM: 0 })
     
     // (H59)
-    const Lx_ = Mc => $.L_I_H(
-      $.L.ZAHB_(Mc),
-      $.L.min_He,
-      $.L.HeI
-    )
+    const Lx_ = ({ Mc }) => $.regimes({
+      LM: $.L.ZAHB_({ Mc }),
+      IM: $.L.min_He,
+      HM: $.L.HeI
+    })
 
     // (H60)
-    const Rx_ = Mc => $.L_I_H(
-      $.R.ZAHB_(Mc),
-      $.R.GB_($.L.min_He),
-      $.R.HeI_(Mc)
-    )
+    const Rx_ = ({ Mc }) => $.regimes({
+      LM: $.R.ZAHB_({ Mc }),
+      IM: $.R.GB_({ L: $.L.min_He }),
+      HM: $.R.HeI_({ Mc })
+    })
     
     // (H62b)
-    const ξ_ = Mc => min(2.5, max(0.4, $.R.mHe_(Mc) / Rx_(Mc)))
+    const ξ_ = ({ Mc }) => min(2.5, max(0.4, $.R.mHe_({ Mc }) / Rx_({ Mc })))
     
     // (H62)
-    const λ_ = (Mc, τ) => ((τ - τx) / (1 - τx)) ** ξ_(Mc)
+    const λ_ = ({ Mc, τ }) => ((τ - τx) / (1 - τx)) ** ξ_({ Mc })
     
     // (H63)
-    const _λ_ = (Mc, τ) => ((τx - τ) / τx) ** 3
+    const _λ_ = ({ Mc, τ }) => ((τx - τ) / τx) ** 3
     
     // (H61)
-    $.L.CHeB_ = (Mc, τ) => 
-      in_range(τx, τ, 1) ? Lx_(Mc) * (($.L.BAGB/Lx_(Mc))**λ_(Mc)) 
-      : Lx_(Mc) * (($.L.HeI/Lx_(Mc)) ** _λ_(Mc))
+    $.L.CHeB_ = ({ Mc, τ }) => 
+      in_range(τx, τ, 1) 
+      ? Lx_({ Mc }) * (($.L.BAGB/Lx_({ Mc })) ** λ_({ Mc, τ })) 
+      : Lx_({ Mc }) * (($.L.HeI/Lx_({ Mc })) ** _λ_({ Mc, τ }))
     
-    const Rmin_ = Mc => min($.R.mHe_(Mc), Rx_(Mc))
+    const Rmin_ = ({ Mc }) => min($.R.mHe_({ Mc }), Rx_({ Mc }))
     
-    const τy = $.LI_H(1, τ_bl)
-    const Ly = $.LI_H($.L.BAGB, NaN)
-    const Ry = $.R.AGB_(Ly)
+    const τy = $.regimes({ LM_IM: 1, HM: τ_bl })
+    const Ly = $.regimes({ LM_IM: $.L.BAGB, HM: NaN })
+    const Ry = $.R.AGB_({ L: Ly })
     
     // (H65)
-    const ρ_ = (Mc, τ) => 
-      (ln(Ry / Rmin_(Mc)) ** (1/3)) * ((τ-τx)/(τy - τx))
-      - (ln(Rx / Rmin_(Mc)) ** (1/3)) * ((τy - τ)/(τy - τx))
+    const ρ_ = ({ Mc, τ }) => 
+      (ln(Ry / Rmin_({ Mc })) ** (1/3)) * ((τ-τx)/(τy - τx))
+      - (ln(Rx_({ Mc }) / Rmin_({ Mc })) ** (1/3)) * ((τy - τ)/(τy - τx))
     
     // (H64)
-    $.R.CHeB_ = (Mc, τ) =>
-      in_range(0, τ, τx) ? $.R.GB_(L_(Mc, τ))
-      : in_range(τy, τ, 1) ? $.R.AGB_(L_(Mc, τ))
-      : in_range(τx, τ, τy) ? Rmin_(Mc) * exp(abs(ρ_(Mc, τ)) ** 3)
+    $.R.CHeB_ = ({ Mc, τ }) => $.R.GB_({ L: $.L.CHeB_({ Mc, τ }) })
+    /*
+      in_range(0, τ, τx) ? $.R.GB_({ L: $.L.CHeB_({ Mc, τ }) })
+      : in_range(τy, τ, 1) ? $.R.AGB_({ L: $.L.CHeB_({ Mc, τ }) })
+      : in_range(τx, τ, τy) ? Rmin_({ Mc }) * exp(abs(ρ_({ Mc, τ })) ** 3)
       : NaN
-    
-    // (H66)
-    $.Mc.BAGB = (b36*(M**b37) + b38) ** (1/4)
-    
+      */
+   
     // (H67)
-    $.Mc.CHeB_ = τ => mix($.Mc.HeI, $.Mc.BAGB, τ)
+    $.Mc.CHeB_ = ({ τ }) => mix($.Mc.HeI, $.Mc.BAGB)(τ)
   }
   
   {
     // (H p.13)
+    $.t.BAGB = $.t.HeI + $.t.He_({ Mc: $.Mc.BAGB })
+  }
+  
+  // (H69, H70)
+  { 
+    // (H69)
+    $.Mc.DU = 0.44 * $.Mc.BAGB + 0.448
+    $.L.DU = $.L.Mc_({ Mc: $.Mc.DU })
     
-    $.t.BAGB = $.t.HeI + $.t.He_($.Mc.CO)
+    const { L_, Mc_, t } = $.general_giant({
+      A: A_He, ta: $.t.BAGB, 
+      La: $.L.BAGB, Lb: $.L.DU
+    })
+    
+    $.L.EAGB_ = ({ t }) => L_({ t })
+    $.Mc.EAGB_ = ({ t }) => Mc_({ t })
+    $.t.DU = t
+  }
+  
+  {
+    // (H73)
+    const λ = min(0.9, 0.3 + 0.001*(M**5))
+
+    // (H72)
+    const t_inf_2 = ({ B, q }) => $.t.DU
+      + 1/((q-1) * A_H_He * B)
+      * ((B/$.L.DU) ** ((q-1)/q))
+      
+    const { L_, Mc_, t } = $.general_giant({
+      A: A_H_He, ta: $.t.DU, 
+      La: $.L.DU, Lb: $.L.DU,
+      _t_inf_2: t_inf_2
+    })
+    $.L.TPAGB_ = ({ t }) => L_({ t })
+    $.Mc.TPAGB_ = ({ t }) => $.Mc.DU + (1-λ) * (Mc_({ t }) - $.Mc.DU)
+    $.t.SN = t
+  }
+  
+  // (H75)
+  {
+    $.Mc.SN = max(M_chandra, 0.773 * $.Mc.BAGB - 0.35)
   }
  
   $.bubble = {}
@@ -1133,7 +1204,9 @@ const star_update = (id, t) => {
   : in_range($.t.BGB, t, $.t.HeI) ? phases.GB
   : in_range($.t.HeI, t, $.t.BAGB) ? phases.CHeB
   : in_range($.t.BAGB, t, $.t.DU) ? phases.EAGB
-  : phases.R
+  : ( t > $.t.DU && $.Mc.CO < $.Mc.SN ) ? phases.TPAGB
+  : ($.Mc.CO > $.Mc.SN) ? ( ($.Mc.SN > 7.0) ? phases.BH : phases.NS )
+  : ( ($.Mc.BAGB < 1.6) ? phases.CO_WD : phases.ONe_WD )
   
  // relative time
   
@@ -1141,12 +1214,12 @@ const star_update = (id, t) => {
     // Main sequence
     case phases.C_MS:
     case phases.MS: {
-      const τ = $.τ.MS_(t)
-      const τ1 = $.τ.MS_1_(t)
-      const τ2 = $.τ.MS_2_(t)
+      const τ = $.τ.MS_({ t })
+      const τ1 = $.τ.MS_1_({ t })
+      const τ2 = $.τ.MS_2_({ t })
       
-      const L = $.L.MS_(τ, τ1, τ2)
-      const R = $.R.MS_(τ, τ1, τ2)
+      const L = $.L.MS_({ τ, τ1, τ2 })
+      const R = $.R.MS_({ τ, τ1, τ2 })
 
       $.L.now = L
       $.R.now = R
@@ -1154,75 +1227,143 @@ const star_update = (id, t) => {
       $.opacity = 1.0
       break
     }
-    
     // Hertzsprung gap
     case phases.HG: {
-      const τ = $.τ.HG_(t)
+      const τ = $.τ.HG_({ t })
       
-      const Mc = $.Mc.HG_(τ)
+      const Mc = $.Mc.HG_({ τ })
       
-      const L = $.L.HG_(τ)
-      const R = $.R.HG_(Mc, τ)
+      const L = $.L.HG_({ τ })
+      const R = $.R.HG_({ Mc, τ })
       
       $.L.now = L
       $.R.now = R
       $.border = "green"
       $.opacity = 1.0
+      
+      //console.log("HG", Mc, L,R)
       break
     }
+    // Giant branch
     case phases.GB: {
-      const τ = $.τ.GB_(t)
+      const τ = $.τ.GB_({ t })
       
-      const Mc = $.Mc.GB_(t, τ)
+      const Mc = $.Mc.GB_({ t, τ })
 
-      const L = $.L.GB_(τ)
-      const R = $.R.GB_(L)  
+      const L = $.L.GB_({ t })
+      const R = $.R.GB_({ L })  
+
+      $.R.now = R
+      $.L.now = L
+      $.border = "blue"
+      $.opacity = 0.5
+
+      //console.log("GB", Mc, L,R)
+      break
+    }
+    // Helium burning
+    case phases.CHeB: {
+      const τ = $.τ.CHeB_({ t })
+      
+      const Mc = $.Mc.CHeB_({ τ })
+      
+      const L = $.L.CHeB_({ Mc, τ })
+      const R = $.R.CHeB_({ Mc, τ })
+
+      $.L.now = L
+      $.R.now = R
+
+      $.border = "pink"
+      $.opacity = 0.1
+
+      //console.log("CHeB", { τ, Mc, L,R })
+      break
+    }
+    // Early AGB
+    case phases.EAGB: {
+      const Mc = $.Mc.EAGB_({ t })
+
+      const L = $.L.EAGB_({ t })
+      const R = $.R.AGB_({ L })  
       
       $.R.now = R
       $.L.now = L
       $.border = "blue"
       $.opacity = 0.5
+      
+      // console.log("EAGB", Mc, L,R)
       break
     }
-    case phases.CHeB: {
-      const τ = $.τ.CHeB_(t)
+    // Thermal pulsating AGB
+    case phases.TPAGB: {
+      const Mc = $.Mc.TPAGB_({ t })
+
+      const L = $.L.TPAGB_({ t })
+      const R = $.R.AGB_({ L })  
       
-      const Mc = $.Mc.CHeB_(τ)
-      
-      const L = $.L.CHeB_(Mc, τ)
-      const R = $.R.CHeB_(Mc, τ)
-      
-      $.L.now = L
       $.R.now = R
-      $.border = "pink"
+      $.L.now = L
+      $.border = "blue"
       $.opacity = 0.5
+      
+      // console.log("TPAGB", Mc, L,R)
+      break
+    }
+    // Supernova
+    case phases.SN: {
+      $.R.now = 1
+      $.border = "white"
+      $.opacity = 1
+      break
+    }
+    // Black hole
+    case phases.BH: {
+      $.R.now = 10
+      $.L.now = 0
+      $.border = "black"
+      $.opacity = 1
+      break
+    }
+    // Neutron star
+    case phases.NS: {
+      $.R.now = 0.2
+      $.border = "blue"
+      $.opacity = 1
+      break
+    }
+    // CO white dwarf
+    case phases.CO_WD: {
+      $.R.now = 0.1
+      $.border = "white"
+      $.opacity = 1
+      break
+    }
+    // ONe white dwarf
+    case phases.ONe_WD: {
+      $.R.now = 0.1
+      $.border = "white"
+      $.opacity = 1
       break
     }
     // no remnant
     case phases.R: {
-      $.R.now = 1
+      $.R.now = 0.1
+      $.L.now = 0
       $.border = "black"
       $.opacity = 0.1
       break
     }
-    default: {
-      $.R.now = $.R.ZAMS
-      $.L.now = $.L.ZAMS
-      $.border = "red"
-      $.opacity = 1.0
-      break
-    }
   }
   if(phase.index < 15) {
-    //console.log(phase)
     //console.log(JSON.stringify($,"",2))
+    //console.log(phase)
   }
  
   $.T.now = radius_lum_to_temp($.R.now, $.L.now)
 
   $.bubble.x = $.T.now
   $.bubble.y = $.L.now
-  $.bubble.r = $.R.now*10
+  $.bubble.r = $.R.now * 4
   $.bubble.color = "rgba(" 
     + temp_to_rgb($.T.now).concat([$.opacity]).join(",") 
     + ")"
@@ -1237,7 +1378,7 @@ for(let i = 0; i < n_stars;){
   
   // Reject unlikely masses
   const test_mass = random_range(min_mass, max_mass)
-  if(initial_mass_function(mass) < initial_mass_function(test_mass)) continue
+  //if(initial_mass_function(mass) < initial_mass_function(test_mass)) continue
   
   const metallicity = 0.02 //random_range(min_metal, max_metal)
   
@@ -1261,7 +1402,7 @@ const chart = new Chart(canvas, {
     }],
   },
   options: {
-    clip: 0,
+    clip: false,
     animation: { duration: 100 },
     backgroundColor: (context, options) => {
       const index = context.dataIndex
@@ -1331,13 +1472,13 @@ const chart = new Chart(canvas, {
   }
 })
 
+const $time_pause = document.getElementById("time-pause")
 const $time_slider = document.getElementById("time-slider")
 const $time_number = document.getElementById("time-number")
+let pause = false
 let time = 0
 let then = 0
 
-$time_slider.addEventListener("input", e => time = exp10(parseFloat(e.target.value)) - 1)
-$time_number.addEventListener("input", e => time = parseFloat(e.target.value))
 const draw = async (now) => {
   time += (now-then)/1000
   then = now
@@ -1345,9 +1486,18 @@ const draw = async (now) => {
   $time_number.value = time.toFixed(2)
   await Promise.all(Object.keys(stars).map(id => star_update(id, time)))
   chart.update()
-  requestAnimationFrame(draw)
+
+  if(!pause) requestAnimationFrame(draw)
 }
-requestAnimationFrame(draw)
+const start_draw = () => {
+  if(!pause) requestAnimationFrame(draw)
+}
+start_draw()
+
+$time_pause.addEventListener("input", e => (pause = e.target.checked) && start_draw())
+$time_slider.addEventListener("input", e => time = exp10(parseFloat(e.target.value)) - 1)
+$time_number.addEventListener("input", e => time = parseFloat(e.target.value))
+
     </script>
   </body>
 </html>
