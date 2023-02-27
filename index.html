@@ -764,7 +764,8 @@ const star_init = (id, M, Z) => {
 
     // (H46)
   {
-    $.R.GB_ = ({ A = min(b4 * (M**-b5), b6 * (M**-b7)), L } = {}) => 
+    const A = min(b4 * (M**-b5), b6 * (M**-b7))
+    $.R.GB_ = ({ L }) => 
       A * (L**b1 + b2*(L**b3))
   }
   
@@ -775,8 +776,8 @@ const star_init = (id, M, Z) => {
     const A1_ = ({ M }) => b56 + b57*M
     const A2_ = ({ M }) => min(b51 * (M**-b52), b53 * (M**-b54))
     $.R.AGB_ = ({ L }) => $.lerp(M1, M2)( 
-      $.R.GB_({ A: A1_({ M: max(M1, M) }), L }), 
-      $.R.GB_({ A: A2_({ M: min(M, M2) }), L })
+      A1_({ M: max(M1, M) }) * ((L**b1) + b2*(L**(b55*b3))), 
+      A2_({ M: min(M, M2) }) * ((L**b1) + b2*(L**b3)), 
     )
   }
 
@@ -872,7 +873,7 @@ const star_init = (id, M, Z) => {
       ([b27, 0], [1, b28])
       
     const R1 = R_({ M })
-    const R2_ = ({ Mc }) => $.R.GB_($.L.ZAHB_({ Mc }))
+    const R2_ = ({ Mc }) => $.R.GB_({ L: $.L.ZAHB_({ Mc }) })
       *((R_({ M: $.M.HeF }) / $.R.GB_({ L: $.L.ZAHB_({ M: $.M.HeF, Mc }) })) ** µ_({ Mc }))
 
     // (H55)
@@ -985,7 +986,7 @@ const star_init = (id, M, Z) => {
   {
     const { L_, Mc_, t } = $.general_giant({
       A: A_H, ta: $.t.BGB, 
-      La: $.L.BGB,Lb: $.L.HeI
+      La: $.L.BGB, Lb: $.L.HeI
     })
     
     $.L.GB_ = ({ t }) => L_({ t })
@@ -1007,7 +1008,7 @@ const star_init = (id, M, Z) => {
       ( C_BCB + c1*(M**c2) ) ** (1/4)
     )
 
-    const C_HeI = ($.Mc.L_({L: $.L.HeI_({ M: $.M.HeF }) }) ** 4) - c1*($.M.HeF ** c2)
+    const C_HeI = ($.Mc.L_({ L: $.L.HeI_({ M: $.M.HeF }) }) ** 4) - c1*($.M.HeF ** c2)
 
     // (H p.13)
     $.Mc.HeI = $.regimes({
@@ -1118,7 +1119,7 @@ const star_init = (id, M, Z) => {
       ? Lx_({ Mc }) * (($.L.BAGB/Lx_({ Mc })) ** λ_({ Mc })) 
       : Lx_({ Mc }) * (($.L.HeI/Lx_({ Mc })) ** _λ_({ Mc }))
     
-    const Rmin_ = Mc => min($.R.mHe_({ Mc }), Rx_({ Mc }))
+    const Rmin_ = ({ Mc }) => min($.R.mHe_({ Mc }), Rx_({ Mc }))
     
     const τy = $.regimes({ LM_IM: 1, HM: τ_bl })
     const Ly = $.regimes({ LM_IM: $.L.BAGB, HM: NaN })
@@ -1241,6 +1242,8 @@ const star_update = (id, t) => {
       $.R.now = R
       $.border = "green"
       $.opacity = 1.0
+      
+      // console.log("HG", Mc, L,R)
       break
     }
     // Giant branch
@@ -1256,6 +1259,8 @@ const star_update = (id, t) => {
       $.L.now = L
       $.border = "blue"
       $.opacity = 0.5
+
+      console.log("GB", Mc, L,R)
       break
     }
     // Helium burning
@@ -1269,10 +1274,11 @@ const star_update = (id, t) => {
 
       $.L.now = L
       $.R.now = R
-      console.log("CHeB", Mc, L,R)
 
       $.border = "pink"
       $.opacity = 0.5
+
+      console.log("CHeB", Mc, L,R)
       break
     }
     // Early AGB
@@ -1286,6 +1292,8 @@ const star_update = (id, t) => {
       $.L.now = L
       $.border = "blue"
       $.opacity = 0.5
+      
+      // console.log("EAGB", Mc, L,R)
       break
     }
     // Thermal pulsating AGB
@@ -1299,6 +1307,8 @@ const star_update = (id, t) => {
       $.L.now = L
       $.border = "blue"
       $.opacity = 0.5
+      
+      // console.log("TPAGB", Mc, L,R)
       break
     }
     // Supernova
