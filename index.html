@@ -167,7 +167,7 @@ let min_sol_lum = abs_mag_to_sol_lum(min_mag), max_sol_lum = abs_mag_to_sol_lum(
 let min_mass = 0.1, max_mass = 20
 let min_metal = 0.01, max_metal = 0.03
 
-const n_stars = 50
+const n_stars = 100
 
 const display = true
 
@@ -408,7 +408,7 @@ const star_init = (id, M, Z) => {
     [3.969331e-3, 4.539076e-3, 1.720906e-3, 1.897857e-4],
     [1.600e+0, 7.640e-1, 3.322e-1]
   )
-  const a72 = (Z>0.01) ? max(_a72, 0.95) : a72
+  const a72 = (Z>0.01) ? max(_a72, 0.95) : _a72
   const a74 = clamp(1.4, _a74, 1.6)
     
   // (H p.27)
@@ -908,7 +908,6 @@ const star_init = (id, M, Z) => {
   check($.L.BAGB)
   check($.R.BAGB)
   
-
   // (H p.10)
   // (H34, H37, H38, H39, H40, H41, H42, H43)
   {
@@ -1224,7 +1223,6 @@ const star_update = (id, t) => {
       $.L.now = L
       $.R.now = R
       $.border = "white"
-      $.opacity = 1.0
       break
     }
     // Hertzsprung gap
@@ -1238,9 +1236,7 @@ const star_update = (id, t) => {
       
       $.L.now = L
       $.R.now = R
-      $.border = "green"
-      $.opacity = 1.0
-      
+      $.border = "hotpink"      
       //console.log("HG", Mc, L,R)
       break
     }
@@ -1255,9 +1251,7 @@ const star_update = (id, t) => {
 
       $.R.now = R
       $.L.now = L
-      $.border = "blue"
-      $.opacity = 0.5
-
+      $.border = "gold"
       //console.log("GB", Mc, L,R)
       break
     }
@@ -1273,8 +1267,7 @@ const star_update = (id, t) => {
       $.L.now = L
       $.R.now = R
 
-      $.border = "pink"
-      $.opacity = 0.1
+      $.border = "red"
 
       //console.log("CHeB", { τ, Mc, L,R })
       break
@@ -1288,8 +1281,7 @@ const star_update = (id, t) => {
       
       $.R.now = R
       $.L.now = L
-      $.border = "blue"
-      $.opacity = 0.5
+      $.border = "aquamarine"
       
       // console.log("EAGB", Mc, L,R)
       break
@@ -1303,8 +1295,7 @@ const star_update = (id, t) => {
       
       $.R.now = R
       $.L.now = L
-      $.border = "blue"
-      $.opacity = 0.5
+      $.border = "cornflowerblue"
       
       // console.log("TPAGB", Mc, L,R)
       break
@@ -1312,8 +1303,7 @@ const star_update = (id, t) => {
     // Supernova
     case phases.SN: {
       $.R.now = 1
-      $.border = "white"
-      $.opacity = 1
+      $.border = "mediumpurple"
       break
     }
     // Black hole
@@ -1321,28 +1311,24 @@ const star_update = (id, t) => {
       $.R.now = 10
       $.L.now = 0
       $.border = "black"
-      $.opacity = 1
       break
     }
     // Neutron star
     case phases.NS: {
       $.R.now = 0.2
       $.border = "blue"
-      $.opacity = 1
       break
     }
     // CO white dwarf
     case phases.CO_WD: {
       $.R.now = 0.1
       $.border = "white"
-      $.opacity = 1
       break
     }
     // ONe white dwarf
     case phases.ONe_WD: {
       $.R.now = 0.1
       $.border = "white"
-      $.opacity = 1
       break
     }
     // no remnant
@@ -1350,7 +1336,6 @@ const star_update = (id, t) => {
       $.R.now = 0.1
       $.L.now = 0
       $.border = "black"
-      $.opacity = 0.1
       break
     }
   }
@@ -1360,10 +1345,11 @@ const star_update = (id, t) => {
   }
  
   $.T.now = radius_lum_to_temp($.R.now, $.L.now)
+  $.opacity = clamp(0.1, 10/$.R.now, 1)
 
   $.bubble.x = $.T.now
   $.bubble.y = $.L.now
-  $.bubble.r = $.R.now * 4
+  $.bubble.r = $.R.now * 2
   $.bubble.color = "rgba(" 
     + temp_to_rgb($.T.now).concat([$.opacity]).join(",") 
     + ")"
@@ -1380,7 +1366,7 @@ for(let i = 0; i < n_stars;){
   const test_mass = random_range(min_mass, max_mass)
   //if(initial_mass_function(mass) < initial_mass_function(test_mass)) continue
   
-  const metallicity = 0.02 //random_range(min_metal, max_metal)
+  const metallicity = random_range(min_metal, max_metal)
   
   star_init(i, mass, metallicity)
   i++
@@ -1450,6 +1436,10 @@ const chart = new Chart(canvas, {
         title: { display, text: 'Luminosity in Suns (L⊙)' },
         display: true,
         position: 'right',
+        ticks: { 
+          callback: value => "₁₀"+log10(value).toPrecision(1),
+          minRotation: 30
+        },
         min: min_sol_lum, max: max_sol_lum,
         grid: { drawOnChartArea: false },
       },
@@ -1480,7 +1470,7 @@ let time = 0
 let then = 0
 
 const draw = async (now) => {
-  time += (now-then)/1000
+  if(then) time += (now-then)/1000
   then = now
   $time_slider.value = log10(1 + time).toFixed(2)
   $time_number.value = time.toFixed(2)
@@ -1494,7 +1484,7 @@ const start_draw = () => {
 }
 start_draw()
 
-$time_pause.addEventListener("input", e => (pause = e.target.checked) && start_draw())
+$time_pause.addEventListener("input", e => { pause = e.target.checked; then = 0; start_draw() })
 $time_slider.addEventListener("input", e => time = exp10(parseFloat(e.target.value)) - 1)
 $time_number.addEventListener("input", e => time = parseFloat(e.target.value))
 
