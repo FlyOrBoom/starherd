@@ -1,5 +1,3 @@
-
-
 <html>
   <head>
     <title>Starherd</title>
@@ -169,7 +167,7 @@ let min_sol_lum = abs_mag_to_sol_lum(min_mag), max_sol_lum = abs_mag_to_sol_lum(
 let min_mass = 0.1, max_mass = 20
 let min_metal = 0.01, max_metal = 0.03
 
-const n_stars = 1
+const n_stars = 50
 
 const display = true
 
@@ -1116,8 +1114,8 @@ const star_init = (id, M, Z) => {
     // (H61)
     $.L.CHeB_ = ({ Mc, τ }) => 
       in_range(τx, τ, 1) 
-      ? Lx_({ Mc }) * (($.L.BAGB/Lx_({ Mc })) ** λ_({ Mc })) 
-      : Lx_({ Mc }) * (($.L.HeI/Lx_({ Mc })) ** _λ_({ Mc }))
+      ? Lx_({ Mc }) * (($.L.BAGB/Lx_({ Mc })) ** λ_({ Mc, τ })) 
+      : Lx_({ Mc }) * (($.L.HeI/Lx_({ Mc })) ** _λ_({ Mc, τ }))
     
     const Rmin_ = ({ Mc }) => min($.R.mHe_({ Mc }), Rx_({ Mc }))
     
@@ -1243,7 +1241,7 @@ const star_update = (id, t) => {
       $.border = "green"
       $.opacity = 1.0
       
-      // console.log("HG", Mc, L,R)
+      //console.log("HG", Mc, L,R)
       break
     }
     // Giant branch
@@ -1260,7 +1258,7 @@ const star_update = (id, t) => {
       $.border = "blue"
       $.opacity = 0.5
 
-      console.log("GB", Mc, L,R)
+      //console.log("GB", Mc, L,R)
       break
     }
     // Helium burning
@@ -1276,9 +1274,9 @@ const star_update = (id, t) => {
       $.R.now = R
 
       $.border = "pink"
-      $.opacity = 0.5
+      $.opacity = 0.1
 
-      console.log("CHeB", Mc, L,R)
+      //console.log("CHeB", { τ, Mc, L,R })
       break
     }
     // Early AGB
@@ -1380,7 +1378,7 @@ for(let i = 0; i < n_stars;){
   
   // Reject unlikely masses
   const test_mass = random_range(min_mass, max_mass)
-  if(initial_mass_function(mass) < initial_mass_function(test_mass)) continue
+  //if(initial_mass_function(mass) < initial_mass_function(test_mass)) continue
   
   const metallicity = 0.02 //random_range(min_metal, max_metal)
   
@@ -1404,7 +1402,7 @@ const chart = new Chart(canvas, {
     }],
   },
   options: {
-    clip: 0,
+    clip: false,
     animation: { duration: 100 },
     backgroundColor: (context, options) => {
       const index = context.dataIndex
