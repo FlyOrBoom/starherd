@@ -1,3 +1,4 @@
+<!doctype html>
 <html>
   <head>
     <title>Starherd</title>
@@ -9,13 +10,15 @@
     <link rel=stylesheet href=style.css>
     <link rel='shortcut icon' type=image/png href=favicon.png>
     <style>
-html, body {
+html, body, canvas {
   margin: 0;
   width: 100%;
   height: 100%;
   background: #222;
   color: white;
   font-size: 16px;
+}
+body>*{
 }
     </style>
   </head>
@@ -35,17 +38,23 @@ html, body {
       <a href="https://ui.adsabs.harvard.edu/abs/1996MNRAS.281..257T/abstract">"Zero-age main-sequence radii and luminosities as analytic functions of mass and metallicity"</a> 
       by Tout, Pols, Eggleton, &amp; Han.
     </p>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.2.1"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
     <script>
 
 "use strict"
 
 const canvas = document.getElementById('hr')
+const ctx = canvas.getContext('2d')
+const backgrounds = [1,2,3].map(n => {
+  const img = new Image()
+  img.src = "backgrounds/" + n + ".png"
+  return img
+})
+let vw, vh, vmin, vmax
 
 // Math
 const random_range = (a, b) => a + (b - a) * Math.random()
 const in_range = (a, x, b) => (a <= x) && (x <= b)
+const to_range = (a,b) => x => (x-a)/(b-a)
 const ln = (x) => Math.log(x)
 const log10 = (x) => ln(x)/ln(10.0)
 const exp = (x) => Math.exp(x)
@@ -64,6 +73,8 @@ const cbrt = (x) => Math.cbrt(x)
 const int_range = (n) => Array(n).fill(0).map((_, i) => i)
 const from_interval = (interval, value) => 
   interval[Object.keys(interval).find(k => parseInt(k) > value)]
+
+const rgb_a = (rgb, a) => "rgb(" + rgb.join(",") + "," + a + ")"
 
 // Constants
 const PI = Math.PI
@@ -760,7 +771,7 @@ const star_init = (id, M, Z) => {
     $.τ.MS_2_ = ({ t }) => clamp(0.0, (t - (1.0 - ε)*$.t.hook)/(ε * $.t.hook), 1.0)
   }
 
-    // (H46)
+  // (H46)
   {
     const A = min(b4 * (M**-b5), b6 * (M**-b7))
     $.R.GB_ = ({ L }) => 
@@ -1345,17 +1356,20 @@ const star_update = (id, t) => {
   }
  
   $.T.now = radius_lum_to_temp($.R.now, $.L.now)
-  $.opacity = clamp(0.1, 10/$.R.now, 1)
+  $.opacity = clamp(0.1, 100/$.R.now, 1)
 
-  $.bubble.x = $.T.now
-  $.bubble.y = $.L.now
-  $.bubble.r = $.R.now * 2
-  $.bubble.color = "rgba(" 
-    + temp_to_rgb($.T.now).concat([$.opacity]).join(",") 
-    + ")"
-  $.bubble.border = $.border
-  $.bubble.mass = $.M.ZAMS.toPrecision(2)
-  
+  $.bubble.T = $.T.now
+  $.bubble.L = $.L.now
+  $.bubble.R = $.R.now
+  $.bubble.M = $.M.ZAMS.toPrecision(2)
+
+  $.bubble.x = to_range(max_temp, min_temp)($.bubble.T)
+  $.bubble.y = 1-to_range(log10(min_sol_lum), log10(max_sol_lum))(log10($.bubble.L))
+  $.bubble.r = $.bubble.R * 2
+
+  $.bubble.color = rgb_a(temp_to_rgb($.T.now), $.opacity)
+  $.bubble.border = rgb_a(temp_to_rgb($.T.now), $.opacity * 0.5)
+
   bubbles[id] = $.bubble
 }
 
@@ -1372,12 +1386,7 @@ for(let i = 0; i < n_stars;){
   i++
 }
 
-Chart.defaults.color = '#ccc'
-Chart.defaults.borderColor = '#444'
-Chart.defaults.maintainAspectRatio = false
-
-//Chart.register(ChartDataLabels)
-const chart = new Chart(canvas, {
+const chart = {
   type: 'bubble',
   //plugins: [ ChartDataLabels ],
   data: {
@@ -1451,16 +1460,9 @@ const chart = new Chart(canvas, {
         reverse: true,
         grid: { drawOnChartArea: true },
       },
-    },
-    onClick: (e) => {
-        const canvasPosition = Chart.helpers.getRelativePosition(e, chart)
-
-        // Substitute the appropriate scale IDs
-        const dataX = chart.scales.x.getValueForPixel(canvasPosition.x)
-        const dataY = chart.scales.y.getValueForPixel(canvasPosition.y)
     }
   }
-})
+}
 
 const $time_pause = document.getElementById("time-pause")
 const $time_slider = document.getElementById("time-slider")
@@ -1469,25 +1471,67 @@ let pause = false
 let time = 0
 let then = 0
 
+const blend = o => ctx.globalCompositeOperation = o
 const draw = async (now) => {
   if(then) time += (now-then)/1000
   then = now
   $time_slider.value = log10(1 + time).toFixed(2)
   $time_number.value = time.toFixed(2)
   await Promise.all(Object.keys(stars).map(id => star_update(id, time)))
-  chart.update()
+
+  //blend("source-in")
+  ctx.clearRect(0,0,vw,vh)
+  ctx.drawImage(backgrounds[0], 0, 0, vmax, vmax)
+
+  //blend("screen")
+  for(const id in stars) {
+    const $ = stars[id]
+
+    if(!(in_range(-1,$.bubble.x,2) && in_range(-1,$.bubble.y,2))) continue
+
+    const x = $.bubble.x*vw
+    const y = $.bubble.y*vh
+    const r = $.bubble.r
+    //console.log(x,y)
+
+
+    const gradient = ctx.createRadialGradient(x, y, 0, x, y, r)
+    gradient.addColorStop(0, $.bubble.color)
+    gradient.addColorStop(0.99, $.bubble.border)
+    gradient.addColorStop(1, "#fff0")
+    ctx.fillStyle = gradient
+    ctx.fillRect(x-r, y-r, 2*r, 2*r)
+  }
+
+  //blend("screen")
+  //ctx.drawImage(backgrounds[1], 0, 0, vmax, vmax)
+  //blend("screen")
+  //ctx.drawImage(backgrounds[2], 0, 0, vmax, vmax)
 
   if(!pause) requestAnimationFrame(draw)
 }
 const start_draw = () => {
   if(!pause) requestAnimationFrame(draw)
 }
-start_draw()
+
+Promise.all(
+  backgrounds.map(img => new Promise(resolve => { img.onload = img.onerror = resolve; }))
+).then(start_draw)
 
 $time_pause.addEventListener("input", e => { pause = e.target.checked; then = 0; start_draw() })
 $time_slider.addEventListener("input", e => time = exp10(parseFloat(e.target.value)) - 1)
 $time_number.addEventListener("input", e => time = parseFloat(e.target.value))
 
+const resize = () => {
+  vw = window.innerWidth
+  vh = window.innerHeight
+  vmin = min(vw, vh)
+  vmax = max(vw, vh)
+  canvas.width = vw
+  canvas.height = vh
+}
+window.addEventListener("resize", resize)
+resize()
     </script>
   </body>
 </html>
