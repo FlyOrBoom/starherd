@@ -145,7 +145,7 @@ let min_sol_lum = abs_mag_to_sol_lum(min_mag), max_sol_lum = abs_mag_to_sol_lum(
 let min_mass = 0.05, max_mass = 20
 let min_metal = 0.01, max_metal = 0.03
 
-const n_stars = 64
+const n_stars = 32
 
 const display = true
 
@@ -1355,7 +1355,7 @@ let then = 0
 
 // init
 
-const base_vs = `#version 300 es
+const surface_vs = `#version 300 es
 
 uniform mat4 u_viewProjection;
 uniform float u_time;
@@ -1428,7 +1428,7 @@ void main() {
 }
 `
 
-const base_fs = `#version 300 es
+const surface_fs = `#version 300 es
 precision highp float;
 
 in float v_id;
@@ -1524,9 +1524,9 @@ void main() {
 }
 `
 
-const baseProgramInfo = twgl.createProgramInfo(gl, [base_vs, base_fs]);
+const surfaceProgramInfo = twgl.createProgramInfo(gl, [surface_vs, surface_fs]);
 
-const process_vs = `#version 300 es
+const diffraction_vs = `#version 300 es
 in vec4 a_position;
 out vec2 v_texcoord;
 
@@ -1536,7 +1536,7 @@ void main() {
 }
 `
 
-const process_fs = `#version 300 es
+const diffraction_fs = `#version 300 es
 precision highp float;
 
 in vec2 v_texcoord;
@@ -1544,8 +1544,7 @@ in vec2 v_texcoord;
 struct Star {
   float radius;
   vec3 color;
-  vec3 limbColor;
-  vec3 position;
+  vec2 position;
 };
 
 uniform Star u_stars[${n_stars}];
@@ -1574,19 +1573,19 @@ void main() {
   vec3 color = vec3(0);
   for(int i = 0; i < ${n_stars}; i++) {
     Star s = u_stars[i];
-    vec2 d = (v_texcoord - s.position.xy) * vec2(u_aspect, 1.0);
+    vec2 d = (v_texcoord - s.position) * vec2(u_aspect, 1.0);
 
     // diffraction spike
-    float fac = 0.004 * spikes(0.2*d, s.radius);
-    // bloom
+    float fac = 0.01 * spikes(0.2*d, s.radius);
+    // heat glow
     fac += 0.03*pow(s.radius/(length(d) - 0.8*s.radius), 2.0);
-    color += fac * s.color * mix(s.limbColor*s.color, s.limbColor, fac);
+    color += fac * s.color*mix(s.color, vec3(1), fac);
   }  
   outColor = vec4(color, 1.0);
 }
 `
 
-const processProgramInfo = twgl.createProgramInfo(gl, [process_vs, process_fs]);
+const diffractionProgramInfo = twgl.createProgramInfo(gl, [diffraction_vs, diffraction_fs]);
 
 twgl.setAttributePrefix("a_")
 
@@ -1606,7 +1605,7 @@ gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
    1, -1,
    1,  1,
 ]), gl.STATIC_DRAW)
-const positionLoc = gl.getAttribLocation(processProgramInfo.program, "a_position")
+const positionLoc = gl.getAttribLocation(diffractionProgramInfo.program, "a_position")
 gl.enableVertexAttribArray(positionLoc)
 gl.vertexAttribPointer(positionLoc, 2, gl.FLOAT, false, 0, 0)
 
@@ -1636,7 +1635,7 @@ const draw = async (now) => {
   $time_number.value = time.toFixed(2)
   await Promise.all(stars.map($ => star_update($, time)))
 
-  gl.useProgram(baseProgramInfo.program);
+  gl.useProgram(surfaceProgramInfo.program);
 
   gl.enable(gl.CULL_FACE)
   gl.enable(gl.DEPTH_TEST)
@@ -1679,10 +1678,9 @@ const draw = async (now) => {
     instanceLimbColors.push(...$.bubble.limbColor)
 
     screenUniforms.u_stars.push({
-      position: m4.transformPoint(m4.multiply(uniforms.u_viewProjection, mat), [0,0,0]),
+      position: [...m4.transformPoint(m4.multiply(uniforms.u_viewProjection, mat), [0,0,0])].slice(0,2),
       radius: $.bubble.r,
-      color: $.bubble.color,
-      limbColor: $.bubble.limbColor
+      color: v3.multiply($.bubble.color, $.bubble.limbColor),
     })
   })
 
@@ -1714,15 +1712,15 @@ const draw = async (now) => {
     },
   })
   const bufferInfo = twgl.createBufferInfoFromArrays(gl, starArrays)
-  const vertexArrayInfo = twgl.createVertexArrayInfo(gl, baseProgramInfo, bufferInfo)
+  const vertexArrayInfo = twgl.createVertexArrayInfo(gl, surfaceProgramInfo, bufferInfo)
 
-  gl.useProgram(baseProgramInfo.program) 
-  twgl.setBuffersAndAttributes(gl, baseProgramInfo, vertexArrayInfo);
-  twgl.setUniforms(baseProgramInfo, uniforms);
+  gl.useProgram(surfaceProgramInfo.program) 
+  twgl.setBuffersAndAttributes(gl, surfaceProgramInfo, vertexArrayInfo);
+  twgl.setUniforms(surfaceProgramInfo, uniforms);
   twgl.drawBufferInfo(gl, vertexArrayInfo, gl.TRIANGLES, vertexArrayInfo.numelements, 0, n_stars);
 
-  gl.useProgram(processProgramInfo.program)
-  twgl.setUniforms(processProgramInfo, screenUniforms);
+  gl.useProgram(diffractionProgramInfo.program)
+  twgl.setUniforms(diffractionProgramInfo, screenUniforms);
   gl.bindVertexArray(screenVAO)
   gl.drawArrays(gl.TRIANGLES,0,6)
 
