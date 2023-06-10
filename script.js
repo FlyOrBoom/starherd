@@ -157,7 +157,7 @@ const bubble_config = {
   max: 100
 }
 
-const stars = {}
+const stars = []
 
 const star_init = (id, M, Z) => {
   
@@ -1167,14 +1167,10 @@ const star_init = (id, M, Z) => {
   $.color = ""
   
   stars[id] = $
-  star_update(id, 0)
+  star_update($, 0)
 }
 
-const bubbles = []
-const borders = []
-
-const star_update = (id, t) => {
-  const $ = stars[id]
+const star_update = ($, t) => {
   const phase = in_range(0, t, $.t.MS) ? ($.M < 0.7 ? phases.C_MS : phases.MS)
   : in_range($.t.MS, t, $.t.BGB) ? phases.HG
   : in_range($.t.BGB, t, $.t.HeI) ? phases.GB
@@ -1335,8 +1331,6 @@ const star_update = (id, t) => {
 
   $.bubble.color = temp_to_rgb($.T.now)
   $.bubble.limbColor = temp_to_rgb($.T.now*0.5) // limbColor darkening
-
-  bubbles[id] = $.bubble
 }
 
 for(let i = 0; i < n_stars;){
@@ -1371,6 +1365,7 @@ in vec2 a_texcoord;
 in vec3 a_normal;
 
 in float a_instanceID;
+in float a_instanceRadius;
 in vec3 a_instanceColor;
 in vec3 a_instanceLimbColor;
 in mat4 a_instancePosition;
@@ -1420,8 +1415,8 @@ void main() {
   v_color = a_instanceColor;
   v_limbColor = a_instanceLimbColor * a_instanceColor * a_instanceColor;
 
-  float height = voronoise(8.0*a_normal + 100.0*v_id);
-  vec4 surfacePosition = a_position + vec4(a_normal * (1.0 + 0.2*height) , 0.0);
+  float radius = a_instanceRadius * (1.0 + 0.2*voronoise(8.0*a_normal + 100.0*v_id));
+  vec4 surfacePosition = vec4(a_normal * radius, 1.0);
   vec4 worldPosition = a_instancePosition * surfacePosition;
   v_position = u_viewProjection * worldPosition;
 
@@ -1529,70 +1524,79 @@ void main() {
 }
 `
 
-const framebufferInfo = twgl.createFramebufferInfo(gl)
-twgl.bindFramebufferInfo(gl, framebufferInfo)
-
 const baseProgramInfo = twgl.createProgramInfo(gl, [base_vs, base_fs]);
 
 const process_vs = `#version 300 es
-
 in vec4 a_position;
-
-uniform vec2 u_resolution;
-
 out vec2 v_texcoord;
 
 void main() {
+  v_texcoord = a_position.xy;
   gl_Position = a_position;
-  v_texcoord = (a_position.xy * 0.5 + 0.5) * u_resolution;
 }
-`;
+`
+
 const process_fs = `#version 300 es
 precision highp float;
 
 in vec2 v_texcoord;
-uniform vec2 u_resolution;
-uniform sampler2D u_texture;
+
+struct Star {
+  float radius;
+  vec3 color;
+  vec3 limbColor;
+  vec3 position;
+};
+
+uniform Star u_stars[${n_stars}];
+uniform float u_aspect;
 
 out vec4 outColor;
 
-#define W 24.0
-#define SQRT32 0.866025403784
-#define SQUARE(u) u*u
+#define R32 0.8660254
 
-vec3 tex(ivec2 p) {
-  return SQUARE(texelFetch(u_texture, p, 0).rgb);
+const mat2 rot1 = mat2(0.5, -R32, R32, 0.5);
+const mat2 rot2 = mat2(0.5, R32, -R32, 0.5);
+
+float spike(vec2 d, float r) {
+  vec2 s = abs(d) * vec2(8,1) + r;
+  return dot(s,s) + sqrt(s.x) + s.y;
+}
+
+float spikes(vec2 p, float r) {
+  float d = length(p);
+
+  return log(2.0+r)*(0.01/(d+r) + 0.3/spike(p.yx, r) + 1.0/spike(p, r)
+  + 1.0/spike(rot1*p, r) + 1.0/spike(rot2*p, r));
 }
 
 void main() {
-  ivec2 pos = ivec2(v_texcoord);
+  vec3 color = vec3(0);
+  for(int i = 0; i < ${n_stars}; i++) {
+    Star s = u_stars[i];
+    vec2 d = (v_texcoord - s.position.xy) * vec2(u_aspect, 1.0);
 
-  vec3 col = tex(pos) * 0.7;
-
-  for(float i=-0.75*W; i<0.75*W; i+=4.0){
-    if(i==0.0) continue;
-    float j = 0.0;
-    float f = exp(-0.5*i*i*i*i/W/W/W/W) / W; // normal distribution
-    col += f * (
-      tex(pos + ivec2( j, i )) +
-      tex(pos + ivec2( SQRT32*i + 0.5*j, +0.5*i + SQRT32*j )) +
-      tex(pos + ivec2( SQRT32*i - 0.5*j, -0.5*i + SQRT32*j ))
-    );
-  }
-
-  outColor = vec4(sqrt(col), 1.0);
+    // diffraction spike
+    float fac = 0.004 * spikes(0.2*d, s.radius);
+    // bloom
+    fac += 0.03*pow(s.radius/(length(d) - 0.8*s.radius), 2.0);
+    color += fac * s.color * mix(s.limbColor*s.color, s.limbColor, fac);
+  }  
+  outColor = vec4(color, 1.0);
 }
-`;
+`
 
 const processProgramInfo = twgl.createProgramInfo(gl, [process_vs, process_fs]);
 
 twgl.setAttributePrefix("a_")
 
 const starArrays = twgl.primitives.createSphereVertices(0.5, 128, 64)
+console.log(starArrays)
 
 const screenVAO = gl.createVertexArray()
 gl.bindVertexArray(screenVAO)
 const screenVertices = gl.createBuffer()
+console.log(screenVertices)
 gl.bindBuffer(gl.ARRAY_BUFFER, screenVertices)
 gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
   -1, -1,
@@ -1622,8 +1626,7 @@ const uniforms = {
   u_time: 0,
 };
 const screenUniforms = {
-  u_texture: framebufferInfo.attachments[0],
-  u_resolution: [0,0],
+  u_aspect: [0,0],
 }
 
 const draw = async (now) => {
@@ -1631,90 +1634,97 @@ const draw = async (now) => {
   then = now
   $time_slider.value = log10(1 + time).toFixed(2)
   $time_number.value = time.toFixed(2)
-  await Promise.all(Object.keys(stars).map(id => star_update(id, time)))
+  await Promise.all(stars.map($ => star_update($, time)))
 
-  {
-    twgl.bindFramebufferInfo(gl, framebufferInfo)
-    gl.useProgram(baseProgramInfo.program);
+  gl.useProgram(baseProgramInfo.program);
 
-    gl.enable(gl.CULL_FACE)
-    gl.clear(gl.COLOR_BUFFER_BIT)
+  gl.enable(gl.CULL_FACE)
+  gl.clear(gl.COLOR_BUFFER_BIT)
 
-    const zoom = 1
-    const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
-    const zNear = 0;
-    const zFar = 200;
-    const projection = m4.ortho(-zoom*aspect, zoom*aspect, -zoom, zoom, zNear, zFar)
-    const eye = [0, 0, 100];
-    const target = [0, 0, 0];
-    const up = [0, 1, 0];
+  const zoom = 1
+  const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
+  const zNear = 0;
+  const zFar = 110;
+  const projection = m4.ortho(-zoom*aspect, zoom*aspect, -zoom, zoom, zNear, zFar)
+  const eye = [0, 0, 100];
+  const target = [0, 0, 0];
+  const up = [0, 1, 0];
 
-    const camera = m4.lookAt(eye, target, up);
-    const view = m4.inverse(camera);
-    uniforms.u_viewProjection = m4.multiply(projection, view);
-    uniforms.u_time = time
+  const camera = m4.lookAt(eye, target, up);
+  const view = m4.inverse(camera);
+  uniforms.u_viewProjection = m4.multiply(projection, view);
+  uniforms.u_time = time
 
 
-    const instancePositions = new Float32Array(n_stars * 16)
-    const instanceIDs = []
-    const instanceColors = []
-    const instanceLimbColors = []
+  const instancePositions = new Float32Array(n_stars * 16)
+  const instanceIDs = []
+  const instanceRadii = []
+  const instanceColors = []
+  const instanceLimbColors = []
+  screenUniforms.u_stars = []
 
-    Object.entries(stars)
-    .sort(( [a_id, a_$], [b_id, b_$] ) => (b_$.bubble.r  - a_$.bubble.r)) // depth sort by radius
-    .forEach(( [id, $], i ) => {
-      const mat = new Float32Array(instancePositions.buffer, i * 16 * 4, 16)
-      m4.identity(mat)
-      m4.translate(mat, [to_11($.bubble.x)*aspect, to_11($.bubble.y), 0 ],mat)
-      m4.rotateZ(mat, i*100, mat)
-      m4.rotateY(mat, time * (i%4 - 1.5), mat)
-      m4.scale(mat, [ $.bubble.r, $.bubble.r, $.bubble.r ], mat)
+  stars
+  .sort((a, b) => (b.bubble.r  - a.bubble.r)) // depth sort by radius
+  .forEach(($, i) => {
+    const mat = new Float32Array(instancePositions.buffer, i * 16 * 4, 16)
+    m4.identity(mat)
+    m4.translate(mat, [to_11($.bubble.x)*aspect, to_11($.bubble.y), 0 ],mat)
+    m4.rotateZ(mat, i*100, mat)
+    m4.rotateY(mat, time * (i%4 - 1.5), mat)
 
-      instanceIDs.push(i*100.0)
-      instanceColors.push(...$.bubble.color)
-      instanceLimbColors.push(...$.bubble.limbColor)
+    instanceIDs.push(i)
+    instanceRadii.push($.bubble.r)
+    instanceColors.push(...$.bubble.color)
+    instanceLimbColors.push(...$.bubble.limbColor)
+
+    screenUniforms.u_stars.push({
+      position: m4.transformPoint(m4.multiply(uniforms.u_viewProjection, mat), [0,0,0]),
+      radius: $.bubble.r,
+      color: $.bubble.color,
+      limbColor: $.bubble.limbColor
     })
+  })
 
-    Object.assign(starArrays, {
-      instancePosition: {
-        numComponents: 16,
-        data: instancePositions,
-        divisor: 1,
-      },
-      instanceID: {
-        numComponents: 1,
-        data: instanceIDs,
-        divisor: 1,
-      },
-      instanceColor: {
-        numComponents: 3,
-        data: instanceColors,
-        divisor: 1,
-      },
-      instanceLimbColor: {
-        numComponents: 3,
-        data: instanceLimbColors,
-        divisor: 1,
-      },
-    })
-    const bufferInfo = twgl.createBufferInfoFromArrays(gl, starArrays)
-    const vertexArrayInfo = twgl.createVertexArrayInfo(gl, baseProgramInfo, bufferInfo)
-    
-    twgl.setBuffersAndAttributes(gl, baseProgramInfo, vertexArrayInfo);
-    twgl.setUniforms(baseProgramInfo, uniforms);
-    twgl.drawBufferInfo(gl, vertexArrayInfo, gl.TRIANGLES, vertexArrayInfo.numelements, 0, n_stars);
+  gl.useProgram(processProgramInfo.program)
+  twgl.setUniforms(processProgramInfo, screenUniforms);
+  gl.bindVertexArray(screenVAO)
+  gl.drawArrays(gl.TRIANGLES,0,6)
 
-  }
-  {
-    twgl.bindFramebufferInfo(gl, null)
-    gl.useProgram(processProgramInfo.program);
 
-    gl.clear(gl.COLOR_BUFFER_BIT)
+  Object.assign(starArrays, {
+    instancePosition: {
+      numComponents: 16,
+      data: instancePositions,
+      divisor: 1,
+    },
+    instanceID: {
+      numComponents: 1,
+      data: instanceIDs,
+      divisor: 1,
+    },
+    instanceRadius: {
+      numComponents: 1,
+      data: instanceRadii,
+      divisor: 1,
+    },
+    instanceColor: {
+      numComponents: 3,
+      data: instanceColors,
+      divisor: 1,
+    },
+    instanceLimbColor: {
+      numComponents: 3,
+      data: instanceLimbColors,
+      divisor: 1,
+    },
+  })
+  const bufferInfo = twgl.createBufferInfoFromArrays(gl, starArrays)
+  const vertexArrayInfo = twgl.createVertexArrayInfo(gl, baseProgramInfo, bufferInfo)
 
-    twgl.setUniforms(processProgramInfo, screenUniforms);
-    gl.bindVertexArray(screenVAO)
-    gl.drawArrays(gl.TRIANGLES,0,6)
-  }
+  gl.useProgram(baseProgramInfo.program) 
+  twgl.setBuffersAndAttributes(gl, baseProgramInfo, vertexArrayInfo);
+  twgl.setUniforms(baseProgramInfo, uniforms);
+  twgl.drawBufferInfo(gl, vertexArrayInfo, gl.TRIANGLES, vertexArrayInfo.numelements, 0, n_stars);
 
   if(!pause) requestAnimationFrame(draw)
 }
@@ -1823,9 +1833,9 @@ const resize = () => {
   axes.setAttribute("viewBox", "0 0 " + vw + " " + vh)
 
   screenUniforms.u_resolution = [vw, vh]
+  screenUniforms.u_aspect = vw/vh
 
   gl.viewport(0,0,vw,vh)
-  twgl.resizeFramebufferInfo(gl, framebufferInfo)
 
   drawLabels()
 }
