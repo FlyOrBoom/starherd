@@ -14,7 +14,7 @@ const backgrounds = [1,2,3].map(n => {
 })
 */
 
-let vw, vh, vmin, vmax
+let vw, vh, vmin, vmax, aspect
 
 // Math
 const random_range = (a, b) => a + (b - a) * Math.random()
@@ -1548,11 +1548,13 @@ struct Star {
 };
 
 uniform Star u_stars[${n_stars}];
-uniform float u_aspect;
+uniform vec2 u_aspect;
+uniform float u_time;
 
 out vec4 outColor;
 
 #define R32 0.8660254
+#define  PI 3.1415927
 
 const mat2 rot1 = mat2(0.5, -R32, R32, 0.5);
 const mat2 rot2 = mat2(0.5, R32, -R32, 0.5);
@@ -1573,12 +1575,23 @@ void main() {
   vec3 color = vec3(0);
   for(int i = 0; i < ${n_stars}; i++) {
     Star s = u_stars[i];
-    vec2 d = (v_texcoord - s.position) * vec2(u_aspect, 1.0);
+    vec2 d = (v_texcoord - s.position) * u_aspect;
 
     // diffraction spike
-    float fac = 0.01 * spikes(0.2*d, s.radius);
+    float fac = 0.008 * spikes(0.2*d, s.radius);
+
     // heat glow
-    fac += 0.03*pow(s.radius/(length(d) - 0.8*s.radius), 2.0);
+    float theta = atan(d.y, d.x);
+    float noise = 0.0;
+    for(int n = 1; n < 256; n+=n)
+      noise += sin(
+        theta*float(n+i%4)
+        +float(i)
+        +(float(n%5) - 2.0)*u_time
+    )*inversesqrt(float(n));
+
+    fac += 0.03*(1.0+0.5*noise)*pow(s.radius/(length(d) - 0.8*s.radius), 2.0);
+    
     color += fac * s.color*mix(s.color, vec3(1), fac);
   }  
   outColor = vec4(color, 1.0);
@@ -1626,6 +1639,7 @@ const uniforms = {
 };
 const screenUniforms = {
   u_aspect: [0,0],
+  u_time: 0
 }
 
 const draw = async (now) => {
@@ -1642,10 +1656,13 @@ const draw = async (now) => {
   gl.clear(gl.COLOR_BUFFER_BIT + gl.DEPTH_BUFFER_BIT)
 
   const zoom = 1
-  const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
   const zNear = 0;
   const zFar = 1000;
-  const projection = m4.ortho(-zoom*aspect, zoom*aspect, -zoom, zoom, zNear, zFar)
+  const projection = m4.ortho(
+    -zoom*aspect[0], zoom*aspect[0], 
+    -zoom*aspect[1], zoom*aspect[1], 
+    zNear, zFar
+  )
   const eye = [0, 0, 1];
   const target = [0, 0, 0];
   const up = [0, 1, 0];
@@ -1654,7 +1671,7 @@ const draw = async (now) => {
   const view = m4.inverse(camera);
   uniforms.u_viewProjection = m4.multiply(projection, view);
   uniforms.u_time = time
-
+  screenUniforms.u_time = time
 
   const instancePositions = new Float32Array(n_stars * 16)
   const instanceIDs = []
@@ -1668,7 +1685,7 @@ const draw = async (now) => {
   .forEach(($, i) => {
     const mat = new Float32Array(instancePositions.buffer, i * 16 * 4, 16)
     m4.identity(mat)
-    m4.translate(mat, [to_11($.bubble.x)*aspect, to_11($.bubble.y), -16 * $.bubble.r ],mat)
+    m4.translate(mat, [to_11($.bubble.x)*aspect[0], to_11($.bubble.y)*aspect[1], -16 * $.bubble.r ],mat)
     m4.rotateZ(mat, i*100, mat)
     m4.rotateY(mat, time * (i%4 - 1.5), mat)
 
@@ -1831,7 +1848,7 @@ const resize = () => {
   axes.setAttribute("viewBox", "0 0 " + vw + " " + vh)
 
   screenUniforms.u_resolution = [vw, vh]
-  screenUniforms.u_aspect = vw/vh
+  screenUniforms.u_aspect = aspect = [sqrt(vw/vh), sqrt(vh/vw)]
 
   gl.viewport(0,0,vw,vh)
 
