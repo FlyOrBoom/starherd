@@ -1438,7 +1438,7 @@ let then = 0
 const base_vs = `#version 300 es
 
 uniform mat4 u_viewProjection;
-uniform mat4 u_viewInverse;
+uniform float u_time;
 
 in vec4 a_position;
 in vec2 a_texcoord;
@@ -1446,7 +1446,7 @@ in vec3 a_normal;
 
 in float a_instanceID;
 in vec3 a_instanceColor;
-in vec3 a_instancelimbColor;
+in vec3 a_instanceLimbColor;
 in mat4 a_instancePosition;
 
 out float v_id;
@@ -1455,21 +1455,52 @@ out vec2 v_texCoord;
 out vec3 v_normal;
 out vec3 v_color;
 out vec3 v_limbColor;
-out vec3 v_surfaceToView;
 
+#define UI0 1597334673U
+#define UI1 3812015801U
+#define UI2 uvec2(UI0, UI1)
+#define UI3 uvec3(UI0, UI1, 2798796415U)
+#define UI4 uvec4(UI3, 1979697957U)
+#define UIF (1.0 / float(0xffffffffU))
+
+vec3 hash33(vec3 p)
+{
+	uvec3 q = uvec3(ivec3(p)) * UI3;
+	q = (q.x ^ q.y ^ q.z)*UI3;
+	return vec3(q) * UIF;
+}
+
+float voronoise(vec3 p)
+{
+  vec3 i = floor(p);
+  vec3 f = fract(p);
+
+  vec2 a = vec2(0.0,0.0);
+  for( int z=-2; z<=2; z++ )
+  for( int y=-2; y<=2; y++ )
+  for( int x=-2; x<=2; x++ )
+  {
+    vec3 g = vec3( x, y, z );
+    vec3 o = hash33( i + g);
+    vec3 d = g - f + o;
+    float w = 1.0-smoothstep(0.0,1.414,length(d));
+    a += vec2(o.z*w,w);
+  }
+
+  return a.x/a.y;
+}
 void main() {
   v_id = a_instanceID;
   v_color = a_instanceColor;
-  v_limbColor = a_instancelimbColor;
+  v_limbColor = a_instanceLimbColor * a_instanceColor * a_instanceColor;
 
-  vec4 worldPosition = a_instancePosition * a_position;
+  vec4 surfacePosition = a_position + vec4(a_normal * (1.0 + 0.2*voronoise(8.0*a_normal + 100.0*v_id)) , 0.0);
+  vec4 worldPosition = a_instancePosition * surfacePosition;
   v_position = u_viewProjection * worldPosition;
 
   v_normal = (a_instancePosition * vec4(a_normal, 0)).xyz;
 
   v_texCoord = a_texcoord;
-
-  v_surfaceToView = (u_viewInverse[3] - worldPosition).xyz;
 
   gl_Position = v_position;
 }
@@ -1484,7 +1515,6 @@ in vec3 v_color;
 in vec3 v_limbColor;
 in vec2 v_texCoord;
 in vec3 v_normal;
-in vec3 v_surfaceToView;
 
 uniform float u_time;
 uniform sampler2D u_diffuse;
@@ -1566,8 +1596,7 @@ void main() {
   float noise = 1.0 - 0.8*fbm_layered(v_texCoord*30.0 + v_id);
 
   vec3 normal = normalize(v_normal);
-  vec3 surfaceToView = normalize(v_surfaceToView);
-  vec3 baseColor = mix(v_limbColor, v_color, dot(normal, surfaceToView)*noise);
+  vec3 baseColor = mix(v_limbColor, v_color, normal.z*noise);
 
   outColor = vec4(baseColor, 1.0);
 }
@@ -1611,13 +1640,15 @@ vec3 tex(ivec2 p) {
 void main() {
   ivec2 pos = ivec2(v_texcoord);
 
-  vec3 col = tex(pos) * 0.5;
+  vec3 col = tex(pos) * 0.7;
 
-  for(float i=-W; i<=W; i++) {
+  for(float i=-W; i<W; i+=4.0){
+    if(i==0.0) continue;
     float X = 1.0 - abs(i/W);
     X = 4.0*X*X;
     for(float j =-X; j<X; j++) {
-      float f = exp(-64.0*i*i*j*j/W/W/W/W) / W / 32.0; // normal distribution
+      if(j==0.0) continue;
+      float f = exp(-0.1*i*i*j*j/W/W/W/W) / W * 0.2; // normal distribution
       col += f * (
         tex(pos + ivec2( j, i )) +
         tex(pos + ivec2( SQRT32*i + 0.5*j, +0.5*i + SQRT32*j )) +
@@ -1684,41 +1715,40 @@ const draw = async (now) => {
     gl.useProgram(baseProgramInfo.program);
 
     gl.enable(gl.CULL_FACE)
-    gl.enable(gl.DEPTH_TEST)
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+    gl.clear(gl.COLOR_BUFFER_BIT)
 
-    const fov = 30 * Math.PI / 180;
+    const zoom = 1
     const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
-    const zNear = 0.5;
-    const zFar = 10;
-    const projection = m4.perspective(fov, aspect, zNear, zFar);
-    const eye = [0, 0, 4];
+    const zNear = 0;
+    const zFar = 200;
+    const projection = m4.ortho(-zoom*aspect, zoom*aspect, -zoom, zoom, zNear, zFar)
+    const eye = [0, 0, 100];
     const target = [0, 0, 0];
     const up = [0, 1, 0];
 
     const camera = m4.lookAt(eye, target, up);
     const view = m4.inverse(camera);
     uniforms.u_viewProjection = m4.multiply(projection, view);
-    uniforms.u_viewInverse = camera
     uniforms.u_time = time
 
 
     const instancePositions = new Float32Array(n_stars * 16)
     const instanceIDs = []
     const instanceColors = []
-    const instancelimbColors = []
+    const instanceLimbColors = []
 
-    Object.entries(stars).forEach(( [id, $], i ) => {
-
+    Object.entries(stars)
+    .sort(( [a_id, a_$], [b_id, b_$] ) => (b_$.bubble.r  - a_$.bubble.r)) // depth sort by radius
+    .forEach(( [id, $], i ) => {
       const mat = new Float32Array(instancePositions.buffer, i * 16 * 4, 16)
       m4.identity(mat)
-      m4.translate(mat, [to_11($.bubble.x)*aspect, to_11($.bubble.y), -$.bubble.r], mat)
+      m4.translate(mat, [to_11($.bubble.x)*aspect, to_11($.bubble.y), 0 ],mat)
       m4.rotateY(mat, time, mat)
       m4.scale(mat, [ $.bubble.r, $.bubble.r, $.bubble.r ], mat)
 
       instanceIDs.push(i*100.0)
       instanceColors.push(...$.bubble.color)
-      instancelimbColors.push(...$.bubble.limbColor)
+      instanceLimbColors.push(...$.bubble.limbColor)
     })
 
     Object.assign(starArrays, {
@@ -1737,9 +1767,9 @@ const draw = async (now) => {
         data: instanceColors,
         divisor: 1,
       },
-      instancelimbColor: {
+      instanceLimbColor: {
         numComponents: 3,
-        data: instancelimbColors,
+        data: instanceLimbColors,
         divisor: 1,
       },
     })
@@ -1755,7 +1785,7 @@ const draw = async (now) => {
     twgl.bindFramebufferInfo(gl, null)
     gl.useProgram(processProgramInfo.program);
 
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+    gl.clear(gl.COLOR_BUFFER_BIT)
 
     twgl.setUniforms(processProgramInfo, screenUniforms);
     gl.bindVertexArray(screenVAO)
