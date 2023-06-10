@@ -2,14 +2,17 @@ import * as twgl from "./dist/twgl-full.module.js"
 const m4 = twgl.m4
 const v3 = twgl.v3
 
-const canvas = document.getElementById("hr")
+const canvas = document.getElementById("canvas")
+const axes = document.getElementById("axes")
 const gl = canvas.getContext("webgl2")
 
+/*
 const backgrounds = [1,2,3].map(n => {
   const img = new Image()
   img.src = "backgrounds/" + n + ".png"
   return img
 })
+*/
 
 let vw, vh, vmin, vmax
 
@@ -27,6 +30,7 @@ const max = (a,b) => Math.max(a,b)
 const min = (a,b) => Math.min(a,b)
 const clamp = (a,x,b) => min(max(x,a),b)
 const mix = (a,b) => (x) => a*(1-x) + b*x
+const round = (x) => Math.round(x)
 const lerp = (x) => (x0, x1) => (v0, v1) =>
   (x < x0) ? v0 : (x > x1) ? v1 : mix(v0, v1)((x-x0)/(x1-x0))
 const check = (x, ...obj) => isFinite(x) || console.error("check:", x, ...obj)
@@ -1348,84 +1352,6 @@ for(let i = 0; i < n_stars;){
   i++
 }
 
-const chart = {
-  type: 'bubble',
-  //plugins: [ ChartDataLabels ],
-  data: {
-    datasets: [{
-      label: 'Stars',
-      data: bubbles,
-      borderWidth: 1
-    }],
-  },
-  options: {
-    clip: false,
-    animation: { duration: 100 },
-    backgroundColor: (context, options) => {
-      const index = context.dataIndex
-      const bubble = context.dataset.data[index]
-      return bubble.color
-    },
-    borderColor: (context, options) => {
-      const index = context.dataIndex
-      const bubble = context.dataset.data[index]
-      return bubble.border
-    },
-    plugins: {
-      datalabels: {
-        align: "top",
-        offset: 10,
-        formatter: bubble => bubble.mass
-      }
-    },
-    layout: {
-      autoPadding: false,
-    },
-    scales: {
-      x: {
-        type: 'logarithmic',
-        title: { display, text: 'Effective temperature (Kelvins)' },
-        position: 'top',
-        min: min_temp, max: max_temp,
-        reverse: true,
-        ticks: { 
-          callback: value => classes[value] + "0: " + value,
-          minRotation: 30
-        },
-        afterBuildTicks: axis => axis.ticks = Object.keys(classes).map(v => ({ value: parseInt(v) })),
-        grid: { drawOnChartArea: false },
-      },
-      x1: {
-        type: 'linear',
-        title: { display, text: 'Blue light versus visible light (B−V index)' },
-        position: 'bottom',
-        min: max_bv, max: min_bv,
-        grid: { drawOnChartArea: true },
-      },
-      y: {
-        type: 'logarithmic',
-        title: { display, text: 'Luminosity in Suns (L⊙)' },
-        display: true,
-        position: 'right',
-        ticks: { 
-          callback: value => "₁₀"+log10(value).toPrecision(1),
-          minRotation: 30
-        },
-        min: min_sol_lum, max: max_sol_lum,
-        grid: { drawOnChartArea: false },
-      },
-      y1: {
-        type: 'linear',
-        position: 'left',
-        title: { display, text: 'Hipparchus’s scale (Absolute magnitude)' },
-        min: max_mag, max: min_mag,
-        reverse: true,
-        grid: { drawOnChartArea: true },
-      },
-    }
-  }
-}
-
 const $time_pause = document.getElementById("time-pause")
 const $time_slider = document.getElementById("time-slider")
 const $time_number = document.getElementById("time-number")
@@ -1798,9 +1724,90 @@ const start_draw = () => {
   if(!pause) requestAnimationFrame(draw)
 }
 
-Promise.all(
-  backgrounds.map(img => new Promise(resolve => { img.onload = img.onerror = resolve; }))
-).then(start_draw)
+const SVG_NS = "http://www.w3.org/2000/svg"
+
+const drawText = (o) => {
+  let text = document.createElementNS(SVG_NS, "text");
+
+  o.props["dominant-baseline"] = "middle"
+  o.props["text-anchor"] = "middle"
+
+  for (const name in o.props) {
+    if (o.props.hasOwnProperty(name)) {
+      text.setAttributeNS(null, name, o.props[name]);
+    }
+  }
+
+  text.textContent = o.text;
+  axes.appendChild(text);
+  return text
+}
+
+const drawLabels = () => {
+  const margin = 50
+  axes.innerHTML = ""
+  drawText({ props: { x: vw/2, y: 0  + margin }, text: "Effective Temperature (Kelvin)" })
+  drawText({ props: { x: vw/2, y: vh - margin }, text: "Blue vs Visible Light (B-V Index)" })
+  drawText({ props: { x: 0  + margin, y: vh/2, transform: "rotate(-90)" }, text: "Absolute magnitude" })
+  drawText({ props: { x: vw - margin, y: vh/2, transform: "rotate(+90)" }, text: "Luminosity in Suns (L⊙)" })
+
+  drawText({ props: { x: 0  + 3*margin, y: 0  + margin }, text: round(max_temp) })
+  drawText({ props: { x: vw - 3*margin, y: 0  + margin }, text: round(min_temp) })
+
+  drawText({ props: { x: 0  + 3*margin, y: vh - margin }, text: round(min_bv) })
+  drawText({ props: { x: vw - 3*margin, y: vh - margin }, text: round(max_bv) })
+
+  drawText({ props: { x: 0  + margin, y: 0  + 3*margin }, text: round(min_mag) })
+  drawText({ props: { x: 0  + margin, y: vh - 3*margin }, text: round(max_mag) })
+
+  drawText({ props: { x: vw - margin, y: 0  + 3*margin }, text: round(max_sol_lum) })
+  drawText({ props: { x: vw - margin, y: vh - 3*margin }, text: round(min_sol_lum) })
+
+}
+/*
+    scales: {
+      x: {
+        type: 'logarithmic',
+        title: { display, text: 'Effective temperature (Kelvins)' },
+        position: 'top',
+        min: min_temp, max: max_temp,
+        reverse: true,
+        ticks: { 
+          callback: value => classes[value] + "0: " + value,
+          minRotation: 30
+        },
+        afterBuildTicks: axis => axis.ticks = Object.keys(classes).map(v => ({ value: parseInt(v) })),
+        grid: { drawOnChartArea: false },
+      },
+      x1: {
+        type: 'linear',
+        title: { display, text: 'Blue light versus visible light (B−V index)' },
+        position: 'bottom',
+        min: max_bv, max: min_bv,
+        grid: { drawOnChartArea: true },
+      },
+      y: {
+        type: 'logarithmic',
+        title: { display, text: 'Luminosity in Suns (L⊙)' },
+        display: true,
+        position: 'right',
+        ticks: { 
+          callback: value => "₁₀"+log10(value).toPrecision(1),
+          minRotation: 30
+        },
+        min: min_sol_lum, max: max_sol_lum,
+        grid: { drawOnChartArea: false },
+      },
+      y1: {
+        type: 'linear',
+        position: 'left',
+        title: { display, text: 'Hipparchus’s scale (Absolute magnitude)' },
+        min: max_mag, max: min_mag,
+        reverse: true,
+        grid: { drawOnChartArea: true },
+      },
+    }
+   */
 
 $time_pause.addEventListener("input", e => { pause = e.target.checked; then = 0; start_draw() })
 $time_slider.addEventListener("input", e => time = exp10(parseFloat(e.target.value)) - 1)
@@ -1815,11 +1822,16 @@ const resize = () => {
 
   canvas.width = vw
   canvas.height = vh
+  axes.setAttribute("viewBox", "0 0 " + vw + " " + vh)
 
   screenUniforms.u_resolution = [vw, vh]
 
   gl.viewport(0,0,vw,vh)
   twgl.resizeFramebufferInfo(gl, framebufferInfo)
+
+  drawLabels()
 }
 window.addEventListener("resize", resize)
 resize()
+start_draw()
+

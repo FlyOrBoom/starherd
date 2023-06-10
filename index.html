@@ -10,34 +10,64 @@
     <link rel=stylesheet href=style.css>
     <link rel='shortcut icon' type=image/png href=favicon.png>
     <style>
-html, body, canvas {
+html, body, canvas, svg {
   margin: 0;
   width: 100%;
   height: 100%;
-  background: #222;
   color: white;
-  font-size: 16px;
+  font-size: 14px;
 }
 body>*{
+  position: absolute;
+}
+details {
+  margin: 1rem;
+  padding: 1rem;
+  background: #000a;
+}
+summary {
+  cursor: pointer;
+}
+h1 {
+  display: inline;
+}
+h1, p{
+  margin: 0;
+  padding: 0;
+}
+#time-controls {
+  bottom: 0;
+}
+svg {
+  mix-blend-mode: difference;
+}
+text {
+  fill: white;
+  font-style: italic;
+  transform-box: fill-box;
+  transform-origin: center;
 }
     </style>
   </head>
   <body>
-    <canvas id="hr"></canvas>
-    <label>
+    <canvas id="canvas"></canvas>
+    <svg id="axes"> </svg>
+    <label id="time-controls">
       <input id="time-pause" type="checkbox">
       <input id="time-slider" type="range" min="0" max="6" value="0" step="1e-5" style="width: 95vw">
       <input id="time-number" type="number" min="0" max="1e6" value="1e-2" step="1">
       <span> million years</span>
     </label>
-    <h1>Starherd</h1>
-    <p> 
-      A stellar evolution visualizer by Xing, based on 
-      <a href="https://arxiv.org/abs/astro-ph/0001295">"Comprehensive analytic formulae for stellar evolution as a function of mass and metallicity"</a> 
-      by Hurley, Pols &amp; Tout, and 
-      <a href="https://ui.adsabs.harvard.edu/abs/1996MNRAS.281..257T/abstract">"Zero-age main-sequence radii and luminosities as analytic functions of mass and metallicity"</a> 
-      by Tout, Pols, Eggleton, &amp; Han.
-    </p>
+    <details>
+      <summary><h1>Starherd</h1></summary>
+      <p> 
+        A stellar evolution visualizer by Xing, based on 
+        <a href="https://arxiv.org/abs/astro-ph/0001295">"Comprehensive analytic formulae for stellar evolution as a function of mass and metallicity"</a> 
+        by Hurley, Pols &amp; Tout, and 
+        <a href="https://ui.adsabs.harvard.edu/abs/1996MNRAS.281..257T/abstract">"Zero-age main-sequence radii and luminosities as analytic functions of mass and metallicity"</a> 
+        by Tout, Pols, Eggleton, &amp; Han.
+      </p>
+    </article>
     <script src="script.js" type="module"></script>
   </body>
 </html>
