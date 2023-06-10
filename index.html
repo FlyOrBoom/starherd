@@ -38,11 +38,15 @@ h1, p{
 #time-controls {
   bottom: 0;
 }
+#time-number {
+  text-align: right;
+}
 svg {
   mix-blend-mode: difference;
 }
 text {
   fill: white;
+  font-size: 18px;
   font-style: italic;
   transform-box: fill-box;
   transform-origin: center;
@@ -53,10 +57,17 @@ text {
     <canvas id="canvas"></canvas>
     <svg id="axes"> </svg>
     <label id="time-controls">
-      <input id="time-pause" type="checkbox">
-      <input id="time-slider" type="range" min="0" max="6" value="0" step="1e-5" style="width: 95vw">
-      <input id="time-number" type="number" min="0" max="1e6" value="1e-2" step="1">
-      <span> million years</span>
+      <div>
+        <label>
+          <input id="time-pause" type="checkbox">
+          pause
+        </label>
+        <label>
+          <input id="time-number" type="number" min="0" max="1e6" value="1e-2" step="1">
+          million years
+        </label>
+        <input id="time-slider" type="range" min="0" max="6" value="0" step="1e-5" style="width: 95vw">
+      </div>
     </label>
     <details>
       <summary><h1>Starherd</h1></summary>
@@ -68,6 +79,7 @@ text {
         by Tout, Pols, Eggleton, &amp; Han.
       </p>
     </article>
+    <script src="dist/twgl-full.module.js" type="module"></script>
     <script src="script.js" type="module"></script>
   </body>
 </html>

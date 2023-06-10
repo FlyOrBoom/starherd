@@ -145,7 +145,7 @@ let min_sol_lum = abs_mag_to_sol_lum(min_mag), max_sol_lum = abs_mag_to_sol_lum(
 let min_mass = 0.05, max_mass = 20
 let min_metal = 0.01, max_metal = 0.03
 
-const n_stars = 100
+const n_stars = 64
 
 const display = true
 
@@ -1420,7 +1420,8 @@ void main() {
   v_color = a_instanceColor;
   v_limbColor = a_instanceLimbColor * a_instanceColor * a_instanceColor;
 
-  vec4 surfacePosition = a_position + vec4(a_normal * (1.0 + 0.2*voronoise(8.0*a_normal + 100.0*v_id)) , 0.0);
+  float height = voronoise(8.0*a_normal + 100.0*v_id);
+  vec4 surfacePosition = a_position + vec4(a_normal * (1.0 + 0.2*height) , 0.0);
   vec4 worldPosition = a_instancePosition * surfacePosition;
   v_position = u_viewProjection * worldPosition;
 
@@ -1518,7 +1519,7 @@ float fbm_layered(vec2 p) {
 }
 
 void main() {
-  vec3 texColor = texture(u_diffuse, v_texCoord*4.0).rgb;
+  //vec3 texColor = texture(u_diffuse, v_texCoord*4.0).rgb;
   float noise = 1.0 - 0.8*fbm_layered(v_texCoord*30.0 + v_id);
 
   vec3 normal = normalize(v_normal);
@@ -1555,7 +1556,7 @@ uniform sampler2D u_texture;
 
 out vec4 outColor;
 
-#define W 32.0
+#define W 24.0
 #define SQRT32 0.866025403784
 #define SQUARE(u) u*u
 
@@ -1568,19 +1569,15 @@ void main() {
 
   vec3 col = tex(pos) * 0.7;
 
-  for(float i=-W; i<W; i+=4.0){
+  for(float i=-0.75*W; i<0.75*W; i+=4.0){
     if(i==0.0) continue;
-    float X = 1.0 - abs(i/W);
-    X = 4.0*X*X;
-    for(float j =-X; j<X; j++) {
-      if(j==0.0) continue;
-      float f = exp(-0.1*i*i*j*j/W/W/W/W) / W * 0.2; // normal distribution
-      col += f * (
-        tex(pos + ivec2( j, i )) +
-        tex(pos + ivec2( SQRT32*i + 0.5*j, +0.5*i + SQRT32*j )) +
-        tex(pos + ivec2( SQRT32*i - 0.5*j, -0.5*i + SQRT32*j ))
-      );
-    }
+    float j = 0.0;
+    float f = exp(-0.5*i*i*i*i/W/W/W/W) / W; // normal distribution
+    col += f * (
+      tex(pos + ivec2( j, i )) +
+      tex(pos + ivec2( SQRT32*i + 0.5*j, +0.5*i + SQRT32*j )) +
+      tex(pos + ivec2( SQRT32*i - 0.5*j, -0.5*i + SQRT32*j ))
+    );
   }
 
   outColor = vec4(sqrt(col), 1.0);
@@ -1669,7 +1666,8 @@ const draw = async (now) => {
       const mat = new Float32Array(instancePositions.buffer, i * 16 * 4, 16)
       m4.identity(mat)
       m4.translate(mat, [to_11($.bubble.x)*aspect, to_11($.bubble.y), 0 ],mat)
-      m4.rotateY(mat, time, mat)
+      m4.rotateZ(mat, i*100, mat)
+      m4.rotateY(mat, time * (i%4 - 1.5), mat)
       m4.scale(mat, [ $.bubble.r, $.bubble.r, $.bubble.r ], mat)
 
       instanceIDs.push(i*100.0)
@@ -1814,8 +1812,8 @@ $time_slider.addEventListener("input", e => time = exp10(parseFloat(e.target.val
 $time_number.addEventListener("input", e => time = parseFloat(e.target.value))
 
 const resize = () => {
-  vw = window.innerWidth
-  vh = window.innerHeight
+  vw = window.innerWidth * window.devicePixelRatio
+  vh = window.innerHeight * window.devicePixelRatio
 
   vmin = min(vw, vh)
   vmax = max(vw, vh)
