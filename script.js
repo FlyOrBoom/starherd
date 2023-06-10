@@ -1532,7 +1532,7 @@ out vec2 v_texcoord;
 
 void main() {
   v_texcoord = a_position.xy;
-  gl_Position = a_position;
+  gl_Position = vec4(a_position.xy, 0.999, 1.0);
 }
 `
 
@@ -1639,14 +1639,15 @@ const draw = async (now) => {
   gl.useProgram(baseProgramInfo.program);
 
   gl.enable(gl.CULL_FACE)
-  gl.clear(gl.COLOR_BUFFER_BIT)
+  gl.enable(gl.DEPTH_TEST)
+  gl.clear(gl.COLOR_BUFFER_BIT + gl.DEPTH_BUFFER_BIT)
 
   const zoom = 1
   const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
   const zNear = 0;
-  const zFar = 110;
+  const zFar = 1000;
   const projection = m4.ortho(-zoom*aspect, zoom*aspect, -zoom, zoom, zNear, zFar)
-  const eye = [0, 0, 100];
+  const eye = [0, 0, 1];
   const target = [0, 0, 0];
   const up = [0, 1, 0];
 
@@ -1664,11 +1665,11 @@ const draw = async (now) => {
   screenUniforms.u_stars = []
 
   stars
-  .sort((a, b) => (b.bubble.r  - a.bubble.r)) // depth sort by radius
+  .sort((a, b) => (a.bubble.r  - b.bubble.r)) // depth sort by radius
   .forEach(($, i) => {
     const mat = new Float32Array(instancePositions.buffer, i * 16 * 4, 16)
     m4.identity(mat)
-    m4.translate(mat, [to_11($.bubble.x)*aspect, to_11($.bubble.y), 0 ],mat)
+    m4.translate(mat, [to_11($.bubble.x)*aspect, to_11($.bubble.y), -16 * $.bubble.r ],mat)
     m4.rotateZ(mat, i*100, mat)
     m4.rotateY(mat, time * (i%4 - 1.5), mat)
 
@@ -1684,12 +1685,6 @@ const draw = async (now) => {
       limbColor: $.bubble.limbColor
     })
   })
-
-  gl.useProgram(processProgramInfo.program)
-  twgl.setUniforms(processProgramInfo, screenUniforms);
-  gl.bindVertexArray(screenVAO)
-  gl.drawArrays(gl.TRIANGLES,0,6)
-
 
   Object.assign(starArrays, {
     instancePosition: {
@@ -1725,6 +1720,11 @@ const draw = async (now) => {
   twgl.setBuffersAndAttributes(gl, baseProgramInfo, vertexArrayInfo);
   twgl.setUniforms(baseProgramInfo, uniforms);
   twgl.drawBufferInfo(gl, vertexArrayInfo, gl.TRIANGLES, vertexArrayInfo.numelements, 0, n_stars);
+
+  gl.useProgram(processProgramInfo.program)
+  twgl.setUniforms(processProgramInfo, screenUniforms);
+  gl.bindVertexArray(screenVAO)
+  gl.drawArrays(gl.TRIANGLES,0,6)
 
   if(!pause) requestAnimationFrame(draw)
 }
