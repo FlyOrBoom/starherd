@@ -43,6 +43,15 @@ const from_interval = (interval, value) =>
 
 const rgb_a = (rgb, a) => "rgb(" + rgb.join(",") + "," + a + ")"
 
+const quad = new Float32Array([
+  -1, -1,
+   1, -1,
+  -1,  1,
+  -1,  1,
+   1, -1,
+   1,  1,
+])
+
 // Constants
 const PI = Math.PI
 const STEFAN = 5.670374419e-8
@@ -1600,27 +1609,77 @@ void main() {
 
 const diffractionProgramInfo = twgl.createProgramInfo(gl, [diffraction_vs, diffraction_fs]);
 
+const diffractionScreenVAO = gl.createVertexArray()
+gl.bindVertexArray(diffractionScreenVAO)
+const diffractionScreenVertices = gl.createBuffer()
+console.log(diffractionScreenVertices)
+gl.bindBuffer(gl.ARRAY_BUFFER, diffractionScreenVertices)
+gl.bufferData(gl.ARRAY_BUFFER, quad, gl.STATIC_DRAW)
+const diffractionPositionLoc = gl.getAttribLocation(diffractionProgramInfo.program, "a_position")
+gl.enableVertexAttribArray(diffractionPositionLoc)
+gl.vertexAttribPointer(diffractionPositionLoc, 2, gl.FLOAT, false, 0, 0)
+
+
+const bloom_vs = `#version 300 es
+in vec4 a_position;
+uniform vec2 u_resolution;
+out vec2 v_texcoord;
+
+void main() {
+  v_texcoord = (a_position.xy * 0.5 + 0.5) * u_resolution;
+  gl_Position = vec4(a_position.xy, -0.999, 1.0);
+}
+`
+const bloom_fs = `#version 300 es
+precision highp float;
+
+in vec2 v_texcoord;
+uniform vec2 u_resolution;
+uniform sampler2D u_texture;
+
+out vec4 outColor;
+#define W 24.0
+#define SQRT32 0.866025403784
+#define SQUARE(u) u*u
+vec3 tex(ivec2 p) {
+  return SQUARE(texelFetch(u_texture, p, 0).rgb);
+}
+  
+void main() {
+  ivec2 pos = ivec2(v_texcoord);
+  vec3 col = tex(pos) * 0.7;
+  for(float i=-0.75*W; i<0.75*W; i+=4.0){
+    if(i==0.0) continue;
+    float f = exp(-0.5*i*i/W/W) / W; // normal distribution
+    col += f * (
+      tex(pos + ivec2( 0.0, i )) +
+      tex(pos + ivec2( SQRT32*i, +0.5*i)) +
+      tex(pos + ivec2( SQRT32*i, -0.5*i))
+    );
+  }
+  outColor = vec4(sqrt(col), 1.0);
+}
+`
+
+const bloomProgramInfo = twgl.createProgramInfo(gl, [bloom_vs, bloom_fs]);
+
+const bloomScreenVAO = gl.createVertexArray()
+gl.bindVertexArray(bloomScreenVAO)
+const bloomScreenVertices = gl.createBuffer()
+console.log(bloomScreenVertices)
+gl.bindBuffer(gl.ARRAY_BUFFER, bloomScreenVertices)
+gl.bufferData(gl.ARRAY_BUFFER, quad, gl.STATIC_DRAW)
+const bloomPositionLoc = gl.getAttribLocation(bloomProgramInfo.program, "a_position")
+gl.enableVertexAttribArray(bloomPositionLoc)
+gl.vertexAttribPointer(bloomPositionLoc, 2, gl.FLOAT, false, 0, 0)
+
+const framebufferInfo = twgl.createFramebufferInfo(gl)
+twgl.bindFramebufferInfo(gl, framebufferInfo)
+
 twgl.setAttributePrefix("a_")
 
 const starArrays = twgl.primitives.createSphereVertices(0.5, 128, 64)
 console.log(starArrays)
-
-const screenVAO = gl.createVertexArray()
-gl.bindVertexArray(screenVAO)
-const screenVertices = gl.createBuffer()
-console.log(screenVertices)
-gl.bindBuffer(gl.ARRAY_BUFFER, screenVertices)
-gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-  -1, -1,
-   1, -1,
-  -1,  1,
-  -1,  1,
-   1, -1,
-   1,  1,
-]), gl.STATIC_DRAW)
-const positionLoc = gl.getAttribLocation(diffractionProgramInfo.program, "a_position")
-gl.enableVertexAttribArray(positionLoc)
-gl.vertexAttribPointer(positionLoc, 2, gl.FLOAT, false, 0, 0)
 
 const tex = twgl.createTexture(gl, {
   min: gl.NEAREST,
@@ -1636,10 +1695,14 @@ const tex = twgl.createTexture(gl, {
 const uniforms = {
   u_diffuse: tex,
   u_time: 0,
-};
-const screenUniforms = {
+}
+const diffractionUniforms = {
   u_aspect: [0,0],
   u_time: 0
+}
+const bloomUniforms = {
+  u_resolution: [0,0],
+  u_texture: framebufferInfo.attachments[0]
 }
 
 const draw = async (now) => {
@@ -1653,7 +1716,6 @@ const draw = async (now) => {
 
   gl.enable(gl.CULL_FACE)
   gl.enable(gl.DEPTH_TEST)
-  gl.clear(gl.COLOR_BUFFER_BIT + gl.DEPTH_BUFFER_BIT)
 
   const zoom = 1
   const zNear = 0;
@@ -1671,14 +1733,14 @@ const draw = async (now) => {
   const view = m4.inverse(camera);
   uniforms.u_viewProjection = m4.multiply(projection, view);
   uniforms.u_time = time
-  screenUniforms.u_time = time
+  diffractionUniforms.u_time = time
 
   const instancePositions = new Float32Array(n_stars * 16)
   const instanceIDs = []
   const instanceRadii = []
   const instanceColors = []
   const instanceLimbColors = []
-  screenUniforms.u_stars = []
+  diffractionUniforms.u_stars = []
 
   stars
   .sort((a, b) => (a.bubble.r  - b.bubble.r)) // depth sort by radius
@@ -1694,7 +1756,7 @@ const draw = async (now) => {
     instanceColors.push(...$.bubble.color)
     instanceLimbColors.push(...$.bubble.limbColor)
 
-    screenUniforms.u_stars.push({
+    diffractionUniforms.u_stars.push({
       position: [...m4.transformPoint(m4.multiply(uniforms.u_viewProjection, mat), [0,0,0])].slice(0,2),
       radius: $.bubble.r,
       color: v3.multiply($.bubble.color, $.bubble.limbColor),
@@ -1731,14 +1793,25 @@ const draw = async (now) => {
   const bufferInfo = twgl.createBufferInfoFromArrays(gl, starArrays)
   const vertexArrayInfo = twgl.createVertexArrayInfo(gl, surfaceProgramInfo, bufferInfo)
 
+  twgl.bindFramebufferInfo(gl, framebufferInfo)
+  gl.clear(gl.COLOR_BUFFER_BIT + gl.DEPTH_BUFFER_BIT)
+
   gl.useProgram(surfaceProgramInfo.program) 
   twgl.setBuffersAndAttributes(gl, surfaceProgramInfo, vertexArrayInfo);
   twgl.setUniforms(surfaceProgramInfo, uniforms);
   twgl.drawBufferInfo(gl, vertexArrayInfo, gl.TRIANGLES, vertexArrayInfo.numelements, 0, n_stars);
 
   gl.useProgram(diffractionProgramInfo.program)
-  twgl.setUniforms(diffractionProgramInfo, screenUniforms);
-  gl.bindVertexArray(screenVAO)
+  twgl.setUniforms(diffractionProgramInfo, diffractionUniforms);
+  gl.bindVertexArray(diffractionScreenVAO)
+  gl.drawArrays(gl.TRIANGLES,0,6)
+
+  twgl.bindFramebufferInfo(gl, null)
+  gl.clear(gl.COLOR_BUFFER_BIT + gl.DEPTH_BUFFER_BIT)
+
+  gl.useProgram(bloomProgramInfo.program)
+  twgl.setUniforms(bloomProgramInfo, bloomUniforms);
+  gl.bindVertexArray(bloomScreenVAO)
   gl.drawArrays(gl.TRIANGLES,0,6)
 
   if(!pause) requestAnimationFrame(draw)
@@ -1847,10 +1920,11 @@ const resize = () => {
   canvas.height = vh
   axes.setAttribute("viewBox", "0 0 " + vw + " " + vh)
 
-  screenUniforms.u_resolution = [vw, vh]
-  screenUniforms.u_aspect = aspect = [sqrt(vw/vh), sqrt(vh/vw)]
+  diffractionUniforms.u_aspect = aspect = [sqrt(vw/vh), sqrt(vh/vw)]
+  bloomUniforms.u_resolution = [vw, vh]
 
   gl.viewport(0,0,vw,vh)
+  twgl.resizeFramebufferInfo(gl, framebufferInfo)
 
   drawLabels()
 }
