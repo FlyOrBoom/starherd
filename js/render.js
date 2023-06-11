@@ -251,19 +251,26 @@ void main() {
     vec2 d = (v_texcoord - s.position) * u_aspect;
 
     // diffraction spike
-    float fac = 0.008 * spikes(0.2*d, s.radius);
+    float fac = 0.0;
+    
+    if(s.radius < 1.0) {
+      fac += 0.008 * spikes(0.2*d, s.radius);
+    }
 
     // heat glow
-    float theta = atan(d.y, d.x);
-    float noise = 0.0;
-    for(int n = 1; n < 256; n+=n)
-      noise += sin(
-        theta*float(n+i%4)
-        +float(i)
-        +(float(n%5) - 2.0)*u_time
-    )*inversesqrt(float(n));
+    if(s.radius > 0.1) {
+      float noise = 0.0;
+      float theta = atan(d.y, d.x);
+      for(int n = 1; n < 256; n+=n)
+	noise += sin(
+	  theta*float(n+i%4)
+	  +float(i)
+	  +(float(n%5) - 2.0)*u_time
+      )*inversesqrt(float(n));
+      noise *= min(1.0, s.radius - 0.1);
+      fac += 0.03*(1.0+0.5*noise)*pow(s.radius/(length(d) - 0.8*s.radius), 2.0);
+    }
 
-    fac += 0.03*(1.0+0.5*noise)*pow(s.radius/(length(d) - 0.8*s.radius), 2.0);
     
     color += fac * s.color*mix(s.color, vec3(1), fac);
   }  

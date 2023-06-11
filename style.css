@@ -6,6 +6,7 @@ html, body {
   color: white;
   font-size: 14px;
   overflow: hidden;
+  background: black;
 }
 main>* {
   position: absolute;
