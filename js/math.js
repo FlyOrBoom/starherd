@@ -2,7 +2,7 @@
 const random_range = (a, b) => a + (b - a) * Math.random()
 const in_range = (a, x, b) => (a <= x) && (x <= b)
 const to_01 = (a,b) => x => (x-a)/(b-a)
-const to_11 = x => x*2-1
+const to_11 = (a,b) => x => to_01(a,b)(x)*2-1
 const ln = (x) => Math.log(x)
 const log10 = (x) => ln(x)/ln(10.0)
 const exp = (x) => Math.exp(x)
@@ -19,6 +19,7 @@ const check = (x, ...obj) => isFinite(x) || console.error("check:", x, ...obj)
 
 const sqrt = (x) => Math.sqrt(x)
 const cbrt = (x) => Math.cbrt(x)
+const norm = (u, v) => sqrt(u.reduce((sum, _, i) => (sum + (u[i] - v[i])*(u[i] - v[i])), 0))
 const int_range = (n) => Array(n).fill(0).map((_, i) => i)
 const from_interval = (interval, value) => 
   interval[Object.keys(interval).find(k => parseInt(k) > value)]

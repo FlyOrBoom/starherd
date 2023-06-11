@@ -1064,7 +1064,7 @@ const star_init = (id, M, Z) => {
 }
 
 export const star_update = ($, t) => {
-  const phase = in_range(0, t, $.t.MS) ? ($.M < 0.7 ? phases.C_MS : phases.MS)
+  $.phase = in_range(0, t, $.t.MS) ? ($.M < 0.7 ? phases.C_MS : phases.MS)
   : in_range($.t.MS, t, $.t.BGB) ? phases.HG
   : in_range($.t.BGB, t, $.t.HeI) ? phases.GB
   : in_range($.t.HeI, t, $.t.BAGB) ? phases.CHeB
@@ -1075,7 +1075,7 @@ export const star_update = ($, t) => {
   
  // relative time
   
-  switch(phase){
+  switch($.phase){
     // Main sequence
     case phases.C_MS:
     case phases.MS: {
@@ -1205,7 +1205,7 @@ export const star_update = ($, t) => {
       break
     }
   }
-  if(phase.index < 15) {
+  if($.phase.index < 15) {
     //console.log(JSON.stringify($,"",2))
     //console.log(phase)
   }
@@ -1218,24 +1218,26 @@ export const star_update = ($, t) => {
   $.bubble.R = $.R.now
   $.bubble.M = $.M.ZAMS.toPrecision(2)
 
-  $.bubble.x = to_01(max_temp, min_temp)($.bubble.T)
-  $.bubble.y = to_01(log10(min_sol_lum), log10(max_sol_lum))(log10($.bubble.L))
+  $.bubble.x = to_11(max_temp, min_temp)($.bubble.T)
+  $.bubble.y = to_11(log10(min_sol_lum), log10(max_sol_lum))(log10($.bubble.L))
   $.bubble.r = $.bubble.R * 0.01
 
   $.bubble.color = temp_to_rgb($.T.now)
   $.bubble.limbColor = temp_to_rgb($.T.now*0.5) // limbColor darkening
 }
 
-for(let i = 0; i < n_stars;){
-  const mass = random_range(min_mass, max_mass)
-  
-  // Reject unlikely masses
-  const test_mass = random_range(min_mass, max_mass)
-  if(initial_mass_function(mass) < initial_mass_function(test_mass)) continue
-  
-  const metallicity = random_range(min_metal, max_metal)
-  
-  star_init(i, mass, metallicity)
-  i++
+export const stars_init = () => {
+  for(let i = 0; i < n_stars;){
+    const mass = random_range(min_mass, max_mass)
+    
+    // Reject unlikely masses
+    const test_mass = random_range(min_mass, max_mass)
+    if(initial_mass_function(mass) < initial_mass_function(test_mass)) continue
+    
+    const metallicity = random_range(min_metal, max_metal)
+    
+    star_init(i, mass, metallicity)
+    i++
+  }
 }
 

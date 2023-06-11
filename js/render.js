@@ -2,17 +2,24 @@ import * as twgl from "./twgl-full.module.js"
 const m4 = twgl.m4
 const v3 = twgl.v3
 
-import { star_update } from "./crunch.js"
+import { stars_init, star_update } from "./crunch.js"
 
 let ww, wh, vw, vh, aspect
 
-const $canvas = document.getElementById("canvas")
-const $axes = document.getElementById("axes")
 const $main = document.getElementById("main")
 const $aside = document.getElementById("aside")
+
+const $canvas = document.getElementById("canvas")
+const $axes = document.getElementById("axes")
+const $board = document.getElementById("board")
+
+const $info = document.getElementById("info")
+let info_star = undefined
+
 const gl = $canvas.getContext("webgl2")
 
 const $fullscreen = document.getElementById("fullscreen")
+const $restart = document.getElementById("restart")
 const $time_pause = document.getElementById("time-pause")
 const $time_slider = document.getElementById("time-slider")
 const $time_number = document.getElementById("time-number")
@@ -283,7 +290,6 @@ const diffractionProgramInfo = twgl.createProgramInfo(gl, [diffraction_vs, diffr
 const diffractionScreenVAO = gl.createVertexArray()
 gl.bindVertexArray(diffractionScreenVAO)
 const diffractionScreenVertices = gl.createBuffer()
-console.log(diffractionScreenVertices)
 gl.bindBuffer(gl.ARRAY_BUFFER, diffractionScreenVertices)
 gl.bufferData(gl.ARRAY_BUFFER, quad, gl.STATIC_DRAW)
 const diffractionPositionLoc = gl.getAttribLocation(diffractionProgramInfo.program, "a_position")
@@ -337,7 +343,6 @@ const bloomProgramInfo = twgl.createProgramInfo(gl, [bloom_vs, bloom_fs]);
 const bloomScreenVAO = gl.createVertexArray()
 gl.bindVertexArray(bloomScreenVAO)
 const bloomScreenVertices = gl.createBuffer()
-console.log(bloomScreenVertices)
 gl.bindBuffer(gl.ARRAY_BUFFER, bloomScreenVertices)
 gl.bufferData(gl.ARRAY_BUFFER, quad, gl.STATIC_DRAW)
 const bloomPositionLoc = gl.getAttribLocation(bloomProgramInfo.program, "a_position")
@@ -350,7 +355,6 @@ twgl.bindFramebufferInfo(gl, framebufferInfo)
 twgl.setAttributePrefix("a_")
 
 const starArrays = twgl.primitives.createSphereVertices(0.5, 128, 64)
-console.log(starArrays)
 
 const tex = twgl.createTexture(gl, {
   min: gl.NEAREST,
@@ -390,12 +394,11 @@ const draw = async (now) => {
   gl.enable(gl.CULL_FACE)
   gl.enable(gl.DEPTH_TEST)
 
-  const zoom = 1
   const zNear = 0;
   const zFar = 1000;
   const projection = m4.ortho(
-    -zoom*aspect[0], zoom*aspect[0], 
-    -zoom*aspect[1], zoom*aspect[1], 
+    -aspect[0], aspect[0], 
+    -aspect[1], aspect[1], 
     zNear, zFar
   )
   const eye = [0, 0, 1];
@@ -420,7 +423,7 @@ const draw = async (now) => {
   .forEach(($, i) => {
     const mat = new Float32Array(instancePositions.buffer, i * 16 * 4, 16)
     m4.identity(mat)
-    m4.translate(mat, [to_11($.bubble.x)*aspect[0], to_11($.bubble.y)*aspect[1], -16 * $.bubble.r ],mat)
+    m4.translate(mat, [$.bubble.x*aspect[0], $.bubble.y*aspect[1], -16 * $.bubble.r ],mat)
     m4.rotateZ(mat, i*100, mat)
     m4.rotateY(mat, time * (i%4 - 1.5), mat)
 
@@ -494,13 +497,11 @@ const draw = async (now) => {
   stats.end()
   if(!pause) requestAnimationFrame(draw)
 }
-const start_draw = () => {
-  if(!pause) requestAnimationFrame(draw)
-}
+const start_draw = () => requestAnimationFrame(draw)
 
 const SVG_NS = "http://www.w3.org/2000/svg"
 
-const drawText = (o) => {
+const draw_text = (o) => {
   let text = document.createElementNS(SVG_NS, "text");
 
   o.props["dominant-baseline"] = "middle"
@@ -517,29 +518,26 @@ const drawText = (o) => {
   return text
 }
 
-const drawLabels = () => {
+const draw_labels = () => {
   const margin = 20
   $axes.innerHTML = ""
-  drawText({ props: { x: vw/2, y: 0  + margin }, text: "Effective Temperature (Kelvin)" })
-  drawText({ props: { x: vw/2, y: vh -5*margin }, text: "Blue vs Visible Light (B-V Index)" })
-  drawText({ props: { x: 0  + margin, y: vh/2, transform: "rotate(-90)" }, text: "Absolute magnitude" })
-  drawText({ props: { x: vw - margin, y: vh/2, transform: "rotate(+90)" }, text: "Luminosity in Suns (L⊙)" })
+  draw_text({ props: { x: vw/2, y: 0  + margin }, text: "Effective Temperature (Kelvin)" })
+  draw_text({ props: { x: vw/2, y: vh -5*margin }, text: "Blue vs Visible Light (B-V Index)" })
+  draw_text({ props: { x: 0  + margin, y: vh/2, transform: "rotate(-90)" }, text: "Absolute magnitude" })
+  draw_text({ props: { x: vw - margin, y: vh/2, transform: "rotate(+90)" }, text: "Luminosity in Suns (L⊙)" })
 
-  drawText({ props: { x: 0  + 3*margin, y: 0  + margin }, text: round(max_temp) })
-  drawText({ props: { x: vw - 3*margin, y: 0  + margin }, text: round(min_temp) })
+  draw_text({ props: { x: 0  + 3*margin, y: 0  + margin }, text: round(max_temp) })
+  draw_text({ props: { x: vw - 3*margin, y: 0  + margin }, text: round(min_temp) })
 
-  drawText({ props: { x: 0  + 3*margin, y: vh -5*margin }, text: round(min_bv) })
-  drawText({ props: { x: vw - 3*margin, y: vh -5*margin }, text: round(max_bv) })
+  draw_text({ props: { x: 0  + 3*margin, y: vh -5*margin }, text: round(min_bv) })
+  draw_text({ props: { x: vw - 3*margin, y: vh -5*margin }, text: round(max_bv) })
 
-  drawText({ props: { x: 0  + margin, y: 0  + 3*margin }, text: round(min_mag) })
-  drawText({ props: { x: 0  + margin, y: vh - 3*margin }, text: round(max_mag) })
+  draw_text({ props: { x: 0  + margin, y: 0  + 3*margin }, text: round(min_mag) })
+  draw_text({ props: { x: 0  + margin, y: vh - 3*margin }, text: round(max_mag) })
 
-  drawText({ props: { x: vw - margin, y: 0  + 3*margin }, text: "10^"+round(log10(max_sol_lum)) })
-  drawText({ props: { x: vw - margin, y: vh - 3*margin }, text: "10^"+round(log10(min_sol_lum)) })
-
+  draw_text({ props: { x: vw - margin, y: 0  + 3*margin }, text: "10^"+round(log10(max_sol_lum)) })
+  draw_text({ props: { x: vw - margin, y: vh - 3*margin }, text: "10^"+round(log10(min_sol_lum)) })
 }
-
-const draw_once = () => pause && draw()
 
 const resize = () => {
   const r = window.devicePixelRatio
@@ -564,17 +562,46 @@ const resize = () => {
   
   gl.viewport(0,0,vw,vh)
   twgl.resizeFramebufferInfo(gl, framebufferInfo)
-
-  drawLabels()
+  draw_labels()
 }
 
 window.addEventListener("resize", resize)
-$fullscreen.addEventListener("input", e => { fullscreen = e.target.checked; resize(); draw_once() })
+$fullscreen.addEventListener("input", e => { fullscreen = e.target.checked; resize(); start_draw() })
+$restart.addEventListener("click", e => { time = 0; stars_init(); start_draw() })
 $time_pause.addEventListener("input", e => { pause = e.target.checked; then = 0; start_draw() })
-$time_slider.addEventListener("input", e => { time = exp10(parseFloat(e.target.value)) - 1; draw_once() })
-$time_number.addEventListener("input", e => { time = parseFloat(e.target.value); draw_once() })
-$quality_select.addEventListener("input", e => { quality = e.target.value; draw_once() })
+$time_slider.addEventListener("input", e => { time = exp10(parseFloat(e.target.value)) - 1; start_draw() })
+$time_number.addEventListener("input", e => { time = parseFloat(e.target.value); start_draw() })
+$quality_select.addEventListener("input", e => { quality = e.target.value; start_draw() })
+$board.addEventListener("click", e => {
+  const x = 2*e.x/ww - 1
+  const y = 1 - 2*e.y/wh
+
+  info_star = stars
+    .sort((a, b) => (a.bubble.r - b.bubble.r))
+    .find($ => $.bubble.r > norm([$.bubble.x, $.bubble.y], [x,y]))
+  
+  if(info_star) {
+    $info.style.display = "block"
+    $info.innerHTML = [
+      "Star "+info_star.id,
+      "Phase: "+info_star.phase.name,
+      "Temperature: "+round(info_star.bubble.T) + "K", 
+      "Mass: "+round(info_star.bubble.M) + "M⊙", 
+      "Luminosity: "+round(info_star.bubble.L) + "L⊙", 
+    ].join("<p>")
+
+    $info.style[ x>0 ? "left" : "right"] = e.x+"px"
+    $info.style[ x>0 ? "right" : "left"] = ""
+
+    $info.style[ y>0 ? "bottom" : "top"] = e.y+"px"
+    $info.style[ y>0 ? "top" : "bottom"] = ""
+
+  } else {
+    $info.style.display = "none"
+  }
+})
 
 resize()
+stars_init()
 start_draw()
 

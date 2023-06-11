@@ -7,6 +7,7 @@ html, body {
   font-size: 14px;
   overflow: hidden;
   background: black;
+  font-family: serif, serif;
 }
 body * {
   box-sizing: border-box;
@@ -16,7 +17,7 @@ main>* {
   left: 0;
   width: 100%;
 }
-#canvas, #axes {
+.screen {
   top: 0;
   height: 100%;
 }
@@ -53,6 +54,14 @@ a:hover, a:focus {
 #controls>:hover, #controls>:focus {
   opacity: 1.0;
 }
+#controls>*>svg {
+  width: 2rem;
+  height: 2rem;
+  transition: transform 200ms;
+}
+#controls>:hover>svg, #controls>:focus>svg {
+  transform: scale(0.8);
+}
 #time {
   flex: 1;
   text-align: center;
@@ -78,17 +87,15 @@ text {
   transform-origin: center;
 }
 
-input {
+input, select {
   font-style: inherit;
-  background: none;
+  font-family: inherit;
+  background: black;
+  color: inherit;
 }
 select, input[type=number] {
   border: 1px solid white;
   border-radius: 3px;
-}
-input ~ svg {
-  width: 2rem;
-  height: 2rem;
 }
 input[type=checkbox],
 input[type=button],
@@ -110,4 +117,12 @@ input[type=range]::-moz-range-track {
 
 input[type=range]:focus::-webkit-slider-runnable-track {
   background: white;
+}
+
+#info {
+  position: absolute;
+  background: #0008;
+  border: 1px solid white;
+  border-radius: 1rem;
+  padding: 1rem;
 }
