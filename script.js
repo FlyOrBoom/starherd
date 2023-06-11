@@ -1358,9 +1358,11 @@ for(let i = 0; i < n_stars;){
 const $time_pause = document.getElementById("time-pause")
 const $time_slider = document.getElementById("time-slider")
 const $time_number = document.getElementById("time-number")
+const $quality_select = document.getElementById("quality-select")
 let pause = false
 let time = 0
 let then = 0
+let quality = 1
 
 // init
 
@@ -1793,7 +1795,7 @@ const draw = async (now) => {
   const bufferInfo = twgl.createBufferInfoFromArrays(gl, starArrays)
   const vertexArrayInfo = twgl.createVertexArrayInfo(gl, surfaceProgramInfo, bufferInfo)
 
-  twgl.bindFramebufferInfo(gl, framebufferInfo)
+  twgl.bindFramebufferInfo(gl, (quality>=2) ? framebufferInfo : null)
   gl.clear(gl.COLOR_BUFFER_BIT + gl.DEPTH_BUFFER_BIT)
 
   gl.useProgram(surfaceProgramInfo.program) 
@@ -1801,18 +1803,22 @@ const draw = async (now) => {
   twgl.setUniforms(surfaceProgramInfo, uniforms);
   twgl.drawBufferInfo(gl, vertexArrayInfo, gl.TRIANGLES, vertexArrayInfo.numelements, 0, n_stars);
 
-  gl.useProgram(diffractionProgramInfo.program)
-  twgl.setUniforms(diffractionProgramInfo, diffractionUniforms);
-  gl.bindVertexArray(diffractionScreenVAO)
-  gl.drawArrays(gl.TRIANGLES,0,6)
+  if(quality>=1){
+    gl.useProgram(diffractionProgramInfo.program)
+    twgl.setUniforms(diffractionProgramInfo, diffractionUniforms);
+    gl.bindVertexArray(diffractionScreenVAO)
+    gl.drawArrays(gl.TRIANGLES,0,6)
+  }
 
-  twgl.bindFramebufferInfo(gl, null)
-  gl.clear(gl.COLOR_BUFFER_BIT + gl.DEPTH_BUFFER_BIT)
+  if(quality>=2) {
+    twgl.bindFramebufferInfo(gl, null)
+    gl.clear(gl.COLOR_BUFFER_BIT + gl.DEPTH_BUFFER_BIT)
 
-  gl.useProgram(bloomProgramInfo.program)
-  twgl.setUniforms(bloomProgramInfo, bloomUniforms);
-  gl.bindVertexArray(bloomScreenVAO)
-  gl.drawArrays(gl.TRIANGLES,0,6)
+    gl.useProgram(bloomProgramInfo.program)
+    twgl.setUniforms(bloomProgramInfo, bloomUniforms);
+    gl.bindVertexArray(bloomScreenVAO)
+    gl.drawArrays(gl.TRIANGLES,0,6)
+  }
 
   if(!pause) requestAnimationFrame(draw)
 }
@@ -1860,54 +1866,11 @@ const drawLabels = () => {
   drawText({ props: { x: vw - margin, y: vh - 3*margin }, text: round(min_sol_lum) })
 
 }
-/*
-    scales: {
-      x: {
-        type: 'logarithmic',
-        title: { display, text: 'Effective temperature (Kelvins)' },
-        position: 'top',
-        min: min_temp, max: max_temp,
-        reverse: true,
-        ticks: { 
-          callback: value => classes[value] + "0: " + value,
-          minRotation: 30
-        },
-        afterBuildTicks: axis => axis.ticks = Object.keys(classes).map(v => ({ value: parseInt(v) })),
-        grid: { drawOnChartArea: false },
-      },
-      x1: {
-        type: 'linear',
-        title: { display, text: 'Blue light versus visible light (B−V index)' },
-        position: 'bottom',
-        min: max_bv, max: min_bv,
-        grid: { drawOnChartArea: true },
-      },
-      y: {
-        type: 'logarithmic',
-        title: { display, text: 'Luminosity in Suns (L⊙)' },
-        display: true,
-        position: 'right',
-        ticks: { 
-          callback: value => "₁₀"+log10(value).toPrecision(1),
-          minRotation: 30
-        },
-        min: min_sol_lum, max: max_sol_lum,
-        grid: { drawOnChartArea: false },
-      },
-      y1: {
-        type: 'linear',
-        position: 'left',
-        title: { display, text: 'Hipparchus’s scale (Absolute magnitude)' },
-        min: max_mag, max: min_mag,
-        reverse: true,
-        grid: { drawOnChartArea: true },
-      },
-    }
-   */
 
 $time_pause.addEventListener("input", e => { pause = e.target.checked; then = 0; start_draw() })
-$time_slider.addEventListener("input", e => time = exp10(parseFloat(e.target.value)) - 1)
-$time_number.addEventListener("input", e => time = parseFloat(e.target.value))
+$time_slider.addEventListener("input", e => { time = exp10(parseFloat(e.target.value)) - 1; if(pause) draw() })
+$time_number.addEventListener("input", e => { time = parseFloat(e.target.value); if(pause) draw() })
+$quality_select.addEventListener("input", e => { quality = e.target.value; if(pause) draw() })
 
 const resize = () => {
   vw = window.innerWidth * window.devicePixelRatio

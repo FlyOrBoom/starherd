@@ -9,7 +9,7 @@
     <meta name=viewport content="width=device-width, initial-scale=1">
     <link rel=stylesheet href=style.css>
     <meta property="og:title" content="Starherd">
-    <meta property="og:site_name" content="Xing’s funny doings">>
+    <meta property="og:site_name" content="Xing’s funny doings">
     <meta property="og:url" content=https://x-ing.space/starherd>
     <meta property="og:description" content="An interactive 3D Hertzsprung-Russell stellar evolution diagram">
     <meta property="og:type" content="website">
@@ -26,22 +26,34 @@
           <input id="time-pause" type="checkbox">
           pause
         </label>
+        &emsp;
         <label>
           <input id="time-number" type="number" min="0" max="1e6" value="1e-2" step="1">
           million years
         </label>
+        &emsp;
+        <label>
+          Quality
+          <select id="quality-select">
+            <option value=0>Low</option> 
+            <option value=1 selected>Medium</option>
+            <option value=2>High</option> 
+          </select>
+        </label>
         <input id="time-slider" type="range" min="0" max="6" value="0" step="1e-5" style="width: 95vw">
       </div>
     </label>
-    <details>
-      <summary><h1>Starherd</h1></summary>
-      <p> 
-        A stellar evolution visualizer by Xing, based on 
-        <a href="https://arxiv.org/abs/astro-ph/0001295">"Comprehensive analytic formulae for stellar evolution as a function of mass and metallicity"</a> 
-        by Hurley, Pols &amp; Tout, and 
-        <a href="https://ui.adsabs.harvard.edu/abs/1996MNRAS.281..257T/abstract">"Zero-age main-sequence radii and luminosities as analytic functions of mass and metallicity"</a> 
-        by Tout, Pols, Eggleton, &amp; Han.
-      </p>
+    <article>
+      <details>
+        <summary><h1>Starherd</h1></summary>
+        <p> 
+          A stellar evolution visualizer by Xing, based on 
+          <a href="https://arxiv.org/abs/astro-ph/0001295">"Comprehensive analytic formulae for stellar evolution as a function of mass and metallicity"</a> 
+          by Hurley, Pols &amp; Tout, and 
+          <a href="https://ui.adsabs.harvard.edu/abs/1996MNRAS.281..257T/abstract">"Zero-age main-sequence radii and luminosities as analytic functions of mass and metallicity"</a> 
+          by Tout, Pols, Eggleton, &amp; Han.
+        </p>
+      </details>
     </article>
     <script src="dist/twgl-full.module.js" type="module"></script>
     <script src="script.js" type="module"></script>
