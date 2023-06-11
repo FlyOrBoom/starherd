@@ -8,6 +8,9 @@ html, body {
   overflow: hidden;
   background: black;
 }
+body * {
+  box-sizing: border-box;
+}
 main>* {
   position: absolute;
   left: 0;
@@ -21,6 +24,7 @@ main>* {
   display: flex;
   align-items: end;
   bottom: 0;
+  padding: 0 0.5rem;
 }
 main, aside {
   position: absolute;
@@ -33,14 +37,21 @@ aside {
   bottom: 0;
   right: 0;
   padding: 1rem;
-  box-sizing: border-box;
 }
-h1 {
-  display: inline;
+a {
+  color: #8af;
+  font-style: italic;
+  text-decoration: none;
 }
-h1, p{
-  margin: 0;
-  padding: 0;
+a:hover, a:focus {
+  text-decoration: underline;
+}
+#controls>*{
+  opacity: 0.5;
+  transition: opacity 200ms;
+}
+#controls>:hover, #controls>:focus {
+  opacity: 1.0;
 }
 #time {
   flex: 1;
@@ -54,10 +65,10 @@ h1, p{
   text-align: right;
 }
 #quality-select {
-  margin: 0 0.5rem 0.5rem 0;
+  margin: 0.5rem;
 }
-#axes {
-  mix-blend-mode: difference;
+#axes, #controls {
+  mix-blend-mode: exclusion;
 }
 text {
   fill: white;
@@ -67,6 +78,14 @@ text {
   transform-origin: center;
 }
 
+input {
+  font-style: inherit;
+  background: none;
+}
+select, input[type=number] {
+  border: 1px solid white;
+  border-radius: 3px;
+}
 input ~ svg {
   width: 2rem;
   height: 2rem;
@@ -79,4 +98,16 @@ input[type=checkbox]:checked + svg {
 }
 input[type=checkbox]:checked + svg + svg {
   display: inline;
+}
+input[type=range]::-webkit-slider-runnable-track,
+input[type=range]::-moz-range-track {
+  width: 100%;
+  height: 3px;
+  background: white;
+  border: none;
+  border-radius: 2px;
+}
+
+input[type=range]:focus::-webkit-slider-runnable-track {
+  background: white;
 }

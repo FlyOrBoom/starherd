@@ -518,24 +518,24 @@ const drawText = (o) => {
 }
 
 const drawLabels = () => {
-  const margin = 50
+  const margin = 20
   $axes.innerHTML = ""
-  drawText({ props: { x: ww/2, y: 0  + margin }, text: "Effective Temperature (Kelwin)" })
-  drawText({ props: { x: ww/2, y: wh - margin }, text: "Blue vs Visible Light (B-v Index)" })
-  drawText({ props: { x: 0  + margin, y: wh/2, transform: "rotate(-90)" }, text: "Absolute magnitude" })
-  drawText({ props: { x: ww - margin, y: wh/2, transform: "rotate(+90)" }, text: "Luminosity in Suns (L⊙)" })
+  drawText({ props: { x: vw/2, y: 0  + margin }, text: "Effective Temperature (Kelvin)" })
+  drawText({ props: { x: vw/2, y: vh -5*margin }, text: "Blue vs Visible Light (B-V Index)" })
+  drawText({ props: { x: 0  + margin, y: vh/2, transform: "rotate(-90)" }, text: "Absolute magnitude" })
+  drawText({ props: { x: vw - margin, y: vh/2, transform: "rotate(+90)" }, text: "Luminosity in Suns (L⊙)" })
 
   drawText({ props: { x: 0  + 3*margin, y: 0  + margin }, text: round(max_temp) })
-  drawText({ props: { x: ww - 3*margin, y: 0  + margin }, text: round(min_temp) })
+  drawText({ props: { x: vw - 3*margin, y: 0  + margin }, text: round(min_temp) })
 
-  drawText({ props: { x: 0  + 3*margin, y: wh - margin }, text: round(min_bv) })
-  drawText({ props: { x: ww - 3*margin, y: wh - margin }, text: round(max_bv) })
+  drawText({ props: { x: 0  + 3*margin, y: vh -5*margin }, text: round(min_bv) })
+  drawText({ props: { x: vw - 3*margin, y: vh -5*margin }, text: round(max_bv) })
 
   drawText({ props: { x: 0  + margin, y: 0  + 3*margin }, text: round(min_mag) })
-  drawText({ props: { x: 0  + margin, y: wh - 3*margin }, text: round(max_mag) })
+  drawText({ props: { x: 0  + margin, y: vh - 3*margin }, text: round(max_mag) })
 
-  drawText({ props: { x: ww - margin, y: 0  + 3*margin }, text: round(max_sol_lum) })
-  drawText({ props: { x: ww - margin, y: wh - 3*margin }, text: round(min_sol_lum) })
+  drawText({ props: { x: vw - margin, y: 0  + 3*margin }, text: "10^"+round(log10(max_sol_lum)) })
+  drawText({ props: { x: vw - margin, y: vh - 3*margin }, text: "10^"+round(log10(min_sol_lum)) })
 
 }
 
@@ -557,7 +557,7 @@ const resize = () => {
   canvas.height = vh
   $aside.style.width = $main.style.width = ww+"px"
   $aside.style.height = $main.style.height = wh+"px"
-  $axes.setAttribute("viewBox", "0 0 " + ww + " " + wh)
+  $axes.setAttribute("viewBox", "0 0 " + vw + " " + vh)
 
   diffractionUniforms.u_aspect = aspect = [sqrt(ww/wh), sqrt(wh/ww)]
   bloomUniforms.u_resolution = [vw, vh]
