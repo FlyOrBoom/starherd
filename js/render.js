@@ -494,6 +494,8 @@ const draw = async (now) => {
     gl.drawArrays(gl.TRIANGLES,0,6)
   }
 
+  info_update(info_star)
+
   stats.end()
   if(!pause) requestAnimationFrame(draw)
 }
@@ -564,6 +566,42 @@ const resize = () => {
   twgl.resizeFramebufferInfo(gl, framebufferInfo)
   draw_labels()
 }
+const info_update = ($) => {
+  if(!$) return
+
+  $info.innerHTML = [
+    "Star " + $.id,
+    "Phase: " + $.phase.name,
+    "Temperature: " + round($.bubble.T) + "K", 
+    "Mass: " + round($.bubble.M) + "M⊙", 
+    "Luminosity: " + round($.bubble.L) + "L⊙", 
+    "Radius: " + round($.bubble.R*10)/10 + "R⊙", 
+  ].join("<p>")
+
+  const X = $.bubble.x > 0
+  const Y = $.bubble.y > 0
+  
+  const x = clamp(0, ($.bubble.x + 1)/2, 1) * ww
+  const y = clamp(0, ($.bubble.y + 1)/2, 1) * wh
+
+  const x_far = X ? "left" : "right"
+  const x_near = X ? "right" : "left"
+  const y_far = Y ? "bottom" : "top"
+  const y_near = Y ? "top" : "bottom"
+
+  $info.style[x_far] = ""
+  $info.style[x_near] = (X ? (ww - x) : x)+"px"
+
+  $info.style[y_far] = ""
+  $info.style[y_near] = (Y ? (wh - y) : y)+"px"
+
+  $info.style["border-top-right-radius"] = ""
+  $info.style["border-top-left-radius"] = ""
+  $info.style["border-bottom-right-radius"] = ""
+  $info.style["border-bottom-left-radius"] = ""
+  $info.style["border-" + y_near + "-" + x_near + "-radius"] = 0
+}
+
 
 window.addEventListener("resize", resize)
 $fullscreen.addEventListener("input", e => { fullscreen = e.target.checked; resize(); start_draw() })
@@ -582,20 +620,6 @@ $board.addEventListener("click", e => {
   
   if(info_star) {
     $info.style.display = "block"
-    $info.innerHTML = [
-      "Star "+info_star.id,
-      "Phase: "+info_star.phase.name,
-      "Temperature: "+round(info_star.bubble.T) + "K", 
-      "Mass: "+round(info_star.bubble.M) + "M⊙", 
-      "Luminosity: "+round(info_star.bubble.L) + "L⊙", 
-    ].join("<p>")
-
-    $info.style[ x>0 ? "left" : "right"] = e.x+"px"
-    $info.style[ x>0 ? "right" : "left"] = ""
-
-    $info.style[ y>0 ? "bottom" : "top"] = e.y+"px"
-    $info.style[ y>0 ? "top" : "bottom"] = ""
-
   } else {
     $info.style.display = "none"
   }

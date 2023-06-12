@@ -26,6 +26,7 @@ const from_interval = (interval, value) =>
 
 const rgb_a = (rgb, a) => "rgb(" + rgb.join(",") + "," + a + ")"
 
+
 const quad = new Float32Array([
   -1, -1,
    1, -1,

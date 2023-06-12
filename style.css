@@ -121,8 +121,9 @@ input[type=range]:focus::-webkit-slider-runnable-track {
 
 #info {
   position: absolute;
-  background: #0008;
-  border: 1px solid white;
+  background: #0004;
+  border: 1px solid #0004;
   border-radius: 1rem;
   padding: 1rem;
+  backdrop-filter: blur(0.2rem);
 }
