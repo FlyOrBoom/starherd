@@ -227,7 +227,7 @@ void main() {
     Star s = u_stars[i];
     vec2 d = (v_texcoord - s.position) * u_aspect;
 
-    if(s.radius*s.radius > dot(d,d)*1.5 + 0.001) discard; // occluded by star
+    if(s.radius*s.radius > dot(d,d)*1.3 + 0.0002) discard; // occluded by star
 
     // diffraction spike
     float fac = 0.0;

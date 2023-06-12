@@ -138,7 +138,7 @@ const draw = async now => {
 			m4.identity(mat);
 			m4.translate(mat, [$.bubble.x * aspect[0], $.bubble.y * aspect[1], -16 * $.bubble.r], mat);
 			m4.rotateZ(mat, i * 100, mat);
-			m4.rotateY(mat, time * 0.2 * ($.id % 6 - 2.5), mat);
+			m4.rotateY(mat, time * 0.5 * ($.id % 6 - 2.5), mat);
 
 			instanceIDs.push(i);
 			instanceRadii.push($.bubble.r);
