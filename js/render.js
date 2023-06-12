@@ -34,7 +34,7 @@ let pause = false;
 let fullscreen = false;
 let time = 0;
 let then = 0;
-let quality = 1;
+let quality = 2;
 const stats = new Stats();
 stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
 $main.append(stats.dom);
