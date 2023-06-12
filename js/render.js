@@ -239,6 +239,7 @@ const draw = async now => {
 };
 
 const start_draw = () => requestAnimationFrame(draw);
+const draw_once = () => pause && start_draw();
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -305,6 +306,8 @@ const resize = () => {
 	twgl.resizeFramebufferInfo(gl, scene.framebufferInfo);
 	twgl.resizeFramebufferInfo(gl, diffraction.framebufferInfo, null, vw / 4, vh / 4);
 	twgl.resizeFramebufferInfo(gl, bloom.framebufferInfo, null, vw / 4, vh / 4);
+
+	draw_once();
 	draw_labels();
 };
 
@@ -348,22 +351,22 @@ const info_update = $ => {
 
 window.addEventListener('resize', resize);
 $fullscreen.addEventListener('input', e => {
-	fullscreen = e.target.checked; resize(); start_draw();
+	fullscreen = e.target.checked; resize();
 });
 $restart.addEventListener('click', e => {
-	time = 0; stars_init(); start_draw();
+	time = 0; stars_init(); draw_once();
 });
 $time_pause.addEventListener('input', e => {
 	pause = e.target.checked; start_draw();
 });
 $time_slider.addEventListener('input', e => {
-	time = exp10(Number.parseFloat(e.target.value)) - 1; start_draw();
+	time = exp10(Number.parseFloat(e.target.value)) - 1; draw_once();
 });
 $time_number.addEventListener('input', e => {
-	time = Number.parseFloat(e.target.value); start_draw();
+	time = Number.parseFloat(e.target.value); draw_once();
 });
 $quality_select.addEventListener('input', e => {
-	quality = e.target.value; start_draw();
+	quality = e.target.value; draw_once();
 });
 $board.addEventListener('click', e => {
 	const x = 2 * e.x / ww - 1;
