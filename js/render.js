@@ -2,7 +2,13 @@ import * as twgl from "./twgl-full.module.js"
 const m4 = twgl.m4
 const v3 = twgl.v3
 
-import { surface_vs, surface_fs, diffraction_vs, diffraction_fs, bloom_vs, bloom_fs } from "./shaders.js"
+import { 
+  scene_vs, scene_fs, 
+  diffraction_vs, diffraction_fs, 
+  bloom_vs, bloom_fs, 
+  composit_vs, composit_fs
+} from "./shaders.js"
+
 import { stars_init, star_update } from "./crunch.js"
 
 let ww, wh, vw, vh, aspect
@@ -36,47 +42,65 @@ $main.appendChild( stats.dom )
 
 // init
 
-const surfaceProgramInfo = twgl.createProgramInfo(gl, [surface_vs, surface_fs]);
+const createQuadVAO = pass => {
 
-const diffractionProgramInfo = twgl.createProgramInfo(gl, [diffraction_vs, diffraction_fs]);
+  pass.screenVAO = gl.createVertexArray()
+  gl.bindVertexArray(pass.screenVAO)
 
-const diffractionScreenVAO = gl.createVertexArray()
-gl.bindVertexArray(diffractionScreenVAO)
-const diffractionScreenVertices = gl.createBuffer()
-gl.bindBuffer(gl.ARRAY_BUFFER, diffractionScreenVertices)
-gl.bufferData(gl.ARRAY_BUFFER, quad, gl.STATIC_DRAW)
-const diffractionPositionLoc = gl.getAttribLocation(diffractionProgramInfo.program, "a_position")
-gl.enableVertexAttribArray(diffractionPositionLoc)
-gl.vertexAttribPointer(diffractionPositionLoc, 2, gl.FLOAT, false, 0, 0)
+  pass.screenVertices = gl.createBuffer()
+  gl.bindBuffer(gl.ARRAY_BUFFER, pass.screenVertices)
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+      -1, -1,
+       1, -1,
+      -1,  1,
+      -1,  1,
+       1, -1,
+       1,  1,
+  ]), gl.STATIC_DRAW)
 
-const bloomProgramInfo = twgl.createProgramInfo(gl, [bloom_vs, bloom_fs]);
-const bloomScreenVAO = gl.createVertexArray()
-gl.bindVertexArray(bloomScreenVAO)
-const bloomScreenVertices = gl.createBuffer()
-gl.bindBuffer(gl.ARRAY_BUFFER, bloomScreenVertices)
-gl.bufferData(gl.ARRAY_BUFFER, quad, gl.STATIC_DRAW)
-const bloomPositionLoc = gl.getAttribLocation(bloomProgramInfo.program, "a_position")
-gl.enableVertexAttribArray(bloomPositionLoc)
-gl.vertexAttribPointer(bloomPositionLoc, 2, gl.FLOAT, false, 0, 0)
-
-const framebufferInfo = twgl.createFramebufferInfo(gl)
-twgl.bindFramebufferInfo(gl, framebufferInfo)
+  pass.positionLoc = gl.getAttribLocation(pass.programInfo.program, "a_position")
+  gl.enableVertexAttribArray(pass.positionLoc)
+  gl.vertexAttribPointer(pass.positionLoc, 2, gl.FLOAT, false, 0, 0)
+}
 
 twgl.setAttributePrefix("a_")
 
-const starArrays = twgl.primitives.createSphereVertices(0.5, 128, 64)
+// Scene: rasterize geometry with star textures
+const scene = {
+  programInfo: twgl.createProgramInfo(gl, [scene_vs, scene_fs]),
+  framebufferInfo: twgl.createFramebufferInfo(gl),
+  uniforms: {},
+}
+const starArrays = twgl.primitives.createSphereVertices(0.5, 128, 64) // instanced spheres VAO
 
-const uniforms = {
-  u_time: 0,
+// Diffraction: analytic large diffraction spikes; half res
+const diffraction = {
+  programInfo: twgl.createProgramInfo(gl, [diffraction_vs, diffraction_fs]),
+  framebufferInfo: twgl.createFramebufferInfo(gl),
+  uniforms: {},
 }
-const diffractionUniforms = {
-  u_aspect: [0,0],
-  u_time: 0
+createQuadVAO(diffraction)
+
+// Bloom: convolved small diffraction spikes; quarter res
+const bloom = {
+  programInfo: twgl.createProgramInfo(gl, [bloom_vs, bloom_fs]),
+  framebufferInfo: twgl.createFramebufferInfo(gl),
+  uniforms: {
+    u_scene: scene.framebufferInfo.attachments[0],
+  },
 }
-const bloomUniforms = {
-  u_resolution: [0,0],
-  u_texture: framebufferInfo.attachments[0]
+createQuadVAO(bloom)
+
+// Composit: merge all together
+const composit = {
+  programInfo: twgl.createProgramInfo(gl, [composit_vs, composit_fs]),
+  uniforms: {
+    u_scene: scene.framebufferInfo.attachments[0],
+    u_diffraction: diffraction.framebufferInfo.attachments[0],
+    u_bloom: bloom.framebufferInfo.attachments[0],
+  },
 }
+createQuadVAO(composit)
 
 const draw = async (now) => {
   stats.begin()
@@ -87,108 +111,132 @@ const draw = async (now) => {
   $time_number.value = time.toFixed(2)
   await Promise.all(stars.map($ => star_update($, time)))
 
-  gl.useProgram(surfaceProgramInfo.program);
+  {
+    const zNear = 0;
+    const zFar = 1000;
+    const projection = m4.ortho(
+      -aspect[0], aspect[0], 
+      -aspect[1], aspect[1], 
+      zNear, zFar
+    )
+    const eye = [0, 0, 1];
+    const target = [0, 0, 0];
+    const up = [0, 1, 0];
 
-  gl.enable(gl.CULL_FACE)
-  gl.enable(gl.DEPTH_TEST)
+    const camera = m4.lookAt(eye, target, up);
+    const view = m4.inverse(camera);
 
-  const zNear = 0;
-  const zFar = 1000;
-  const projection = m4.ortho(
-    -aspect[0], aspect[0], 
-    -aspect[1], aspect[1], 
-    zNear, zFar
-  )
-  const eye = [0, 0, 1];
-  const target = [0, 0, 0];
-  const up = [0, 1, 0];
+    scene.uniforms.u_viewProjection = m4.multiply(projection, view);
+    scene.uniforms.u_time = time
 
-  const camera = m4.lookAt(eye, target, up);
-  const view = m4.inverse(camera);
-  uniforms.u_viewProjection = m4.multiply(projection, view);
-  uniforms.u_time = time
-  diffractionUniforms.u_time = time
+    diffraction.uniforms.u_time = time
+    diffraction.uniforms.u_stars = []
 
-  const instancePositions = new Float32Array(n_stars * 16)
-  const instanceIDs = []
-  const instanceRadii = []
-  const instanceColors = []
-  const instanceLimbColors = []
-  diffractionUniforms.u_stars = []
+    const instancePositions = new Float32Array(n_stars * 16)
+    const instanceIDs = []
+    const instanceRadii = []
+    const instanceColors = []
+    const instanceLimbColors = []
 
-  stars
-  .sort((a, b) => (a.bubble.r  - b.bubble.r)) // depth sort by radius
-  .forEach(($, i) => {
-    const mat = new Float32Array(instancePositions.buffer, i * 16 * 4, 16)
-    m4.identity(mat)
-    m4.translate(mat, [$.bubble.x*aspect[0], $.bubble.y*aspect[1], -16 * $.bubble.r ],mat)
-    m4.rotateZ(mat, i*100, mat)
-    m4.rotateY(mat, time * 0.2 * ($.id%6 - 2.5), mat)
+    stars
+    .sort((a, b) => (a.bubble.r  - b.bubble.r)) // depth sort by radius
+    .forEach(($, i) => {
+      const mat = new Float32Array(instancePositions.buffer, i * 16 * 4, 16)
+      m4.identity(mat)
+      m4.translate(mat, [$.bubble.x*aspect[0], $.bubble.y*aspect[1], -16 * $.bubble.r ],mat)
+      m4.rotateZ(mat, i*100, mat)
+      m4.rotateY(mat, time * 0.2 * ($.id%6 - 2.5), mat)
 
-    instanceIDs.push(i)
-    instanceRadii.push($.bubble.r)
-    instanceColors.push(...$.bubble.color)
-    instanceLimbColors.push(...$.bubble.limbColor)
+      instanceIDs.push(i)
+      instanceRadii.push($.bubble.r)
+      instanceColors.push(...$.bubble.color)
+      instanceLimbColors.push(...$.bubble.limbColor)
 
-    diffractionUniforms.u_stars.push({
-      position: [...m4.transformPoint(m4.multiply(uniforms.u_viewProjection, mat), [0,0,0])].slice(0,2),
-      radius: $.bubble.r,
-      color: v3.multiply($.bubble.color, $.bubble.limbColor),
+      diffraction.uniforms.u_stars.push({
+        position: [...m4.transformPoint(m4.multiply(scene.uniforms.u_viewProjection, mat), [0,0,0])].slice(0,2),
+        radius: $.bubble.r,
+        color: v3.multiply($.bubble.color, $.bubble.limbColor),
+      })
     })
-  })
 
-  Object.assign(starArrays, {
-    instancePosition: {
-      numComponents: 16,
-      data: instancePositions,
-      divisor: 1,
-    },
-    instanceID: {
-      numComponents: 1,
-      data: instanceIDs,
-      divisor: 1,
-    },
-    instanceRadius: {
-      numComponents: 1,
-      data: instanceRadii,
-      divisor: 1,
-    },
-    instanceColor: {
-      numComponents: 3,
-      data: instanceColors,
-      divisor: 1,
-    },
-    instanceLimbColor: {
-      numComponents: 3,
-      data: instanceLimbColors,
-      divisor: 1,
-    },
-  })
-  const bufferInfo = twgl.createBufferInfoFromArrays(gl, starArrays)
-  const vertexArrayInfo = twgl.createVertexArrayInfo(gl, surfaceProgramInfo, bufferInfo)
+    Object.assign(starArrays, {
+      instancePosition: {
+        numComponents: 16,
+        data: instancePositions,
+        divisor: 1,
+      },
+      instanceID: {
+        numComponents: 1,
+        data: instanceIDs,
+        divisor: 1,
+      },
+      instanceRadius: {
+        numComponents: 1,
+        data: instanceRadii,
+        divisor: 1,
+      },
+      instanceColor: {
+        numComponents: 3,
+        data: instanceColors,
+        divisor: 1,
+      },
+      instanceLimbColor: {
+        numComponents: 3,
+        data: instanceLimbColors,
+        divisor: 1,
+      },
+    })
 
-  twgl.bindFramebufferInfo(gl, (quality>=2) ? framebufferInfo : null)
-  gl.clear(gl.COLOR_BUFFER_BIT + gl.DEPTH_BUFFER_BIT)
+  }
 
-  gl.useProgram(surfaceProgramInfo.program) 
-  twgl.setBuffersAndAttributes(gl, surfaceProgramInfo, vertexArrayInfo);
-  twgl.setUniforms(surfaceProgramInfo, uniforms);
-  twgl.drawBufferInfo(gl, vertexArrayInfo, gl.TRIANGLES, vertexArrayInfo.numelements, 0, n_stars);
+  if(quality>=0) {
+    gl.enable(gl.CULL_FACE)
+    gl.enable(gl.DEPTH_TEST)
+
+    gl.useProgram(scene.programInfo.program)
+
+    const bufferInfo = twgl.createBufferInfoFromArrays(gl, starArrays)
+    const vertexArrayInfo = twgl.createVertexArrayInfo(gl, scene.programInfo, bufferInfo)
+
+    gl.useProgram(scene.programInfo.program) 
+    twgl.setBuffersAndAttributes(gl, scene.programInfo, vertexArrayInfo);
+    twgl.setUniforms(scene.programInfo, scene.uniforms);
+
+    twgl.bindFramebufferInfo(gl, (quality>=1) ? scene.framebufferInfo : null)
+    gl.clear(gl.COLOR_BUFFER_BIT + gl.DEPTH_BUFFER_BIT)
+    twgl.drawBufferInfo(gl, vertexArrayInfo, gl.TRIANGLES, vertexArrayInfo.numelements, 0, n_stars);
+
+    gl.disable(gl.CULL_FACE)
+    gl.disable(gl.DEPTH_TEST)
+  }
 
   if(quality>=1){
-    gl.useProgram(diffractionProgramInfo.program)
-    twgl.setUniforms(diffractionProgramInfo, diffractionUniforms);
-    gl.bindVertexArray(diffractionScreenVAO)
+    gl.useProgram(diffraction.programInfo.program)
+    twgl.setUniforms(diffraction.programInfo, diffraction.uniforms);
+    gl.bindVertexArray(diffraction.screenVAO)
+    twgl.bindFramebufferInfo(gl, diffraction.framebufferInfo)
+
+    gl.clear(gl.COLOR_BUFFER_BIT)
     gl.drawArrays(gl.TRIANGLES,0,6)
   }
 
   if(quality>=2) {
-    twgl.bindFramebufferInfo(gl, null)
-    gl.clear(gl.COLOR_BUFFER_BIT + gl.DEPTH_BUFFER_BIT)
+    gl.useProgram(bloom.programInfo.program)
+    twgl.setUniforms(bloom.programInfo, bloom.uniforms)
+    gl.bindVertexArray(bloom.screenVAO)
+    twgl.bindFramebufferInfo(gl, bloom.framebufferInfo)
 
-    gl.useProgram(bloomProgramInfo.program)
-    twgl.setUniforms(bloomProgramInfo, bloomUniforms);
-    gl.bindVertexArray(bloomScreenVAO)
+    gl.clear(gl.COLOR_BUFFER_BIT)
+    gl.drawArrays(gl.TRIANGLES,0,6)
+  }
+
+  if(quality>=1) {
+    gl.useProgram(composit.programInfo.program)
+    twgl.setUniforms(composit.programInfo, composit.uniforms);
+    gl.bindVertexArray(composit.screenVAO)
+
+    twgl.bindFramebufferInfo(gl, null)
+    gl.clear(gl.COLOR_BUFFER_BIT)
     gl.drawArrays(gl.TRIANGLES,0,6)
   }
 
@@ -257,11 +305,13 @@ const resize = () => {
   $aside.style.height = $main.style.height = wh+"px"
   $axes.setAttribute("viewBox", "0 0 " + vw + " " + vh)
 
-  diffractionUniforms.u_aspect = aspect = [sqrt(ww/wh), sqrt(wh/ww)]
-  bloomUniforms.u_resolution = [vw, vh]
+  diffraction.uniforms.u_aspect = aspect = [sqrt(ww/wh), sqrt(wh/ww)]
+  bloom.uniforms.u_resolution = [vw, vh]
   
   gl.viewport(0,0,vw,vh)
-  twgl.resizeFramebufferInfo(gl, framebufferInfo)
+  twgl.resizeFramebufferInfo(gl, scene.framebufferInfo)
+  twgl.resizeFramebufferInfo(gl, diffraction.framebufferInfo, null, vw/2, vh/2)
+  twgl.resizeFramebufferInfo(gl, bloom.framebufferInfo, null, vw/4, vh/4)
   draw_labels()
 }
 const info_update = ($) => {

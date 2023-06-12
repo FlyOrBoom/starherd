@@ -27,15 +27,6 @@ const from_interval = (interval, value) =>
 const rgb_a = (rgb, a) => "rgb(" + rgb.join(",") + "," + a + ")"
 
 
-const quad = new Float32Array([
-  -1, -1,
-   1, -1,
-  -1,  1,
-  -1,  1,
-   1, -1,
-   1,  1,
-])
-
 // Constants
 const PI = Math.PI
 const STEFAN = 5.670374419e-8

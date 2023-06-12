@@ -13,7 +13,7 @@ vec3 hash33(vec3 p3)
 }
 `
 
-export const surface_vs = std + `
+export const scene_vs = std + `
 uniform mat4 u_viewProjection;
 uniform float u_time;
 
@@ -73,7 +73,7 @@ void main() {
 }
 `
 
-export const surface_fs = std + `
+export const scene_fs = std + `
 in float v_id;
 in vec4 v_position;
 in vec3 v_color;
@@ -178,7 +178,7 @@ out vec2 v_texcoord;
 
 void main() {
   v_texcoord = a_position.xy;
-  gl_Position = vec4(a_position.xy, 0.999, 1.0);
+  gl_Position = vec4(a_position.xy, 0.0, 1.0);
 }
 `
 
@@ -245,6 +245,7 @@ void main() {
   outColor = vec4(color, 1.0);
 }
 `
+
 export const bloom_vs = std + `
 in vec4 a_position;
 uniform vec2 u_resolution;
@@ -252,34 +253,62 @@ out vec2 v_texcoord;
 
 void main() {
   v_texcoord = (a_position.xy * 0.5 + 0.5) * u_resolution;
-  gl_Position = vec4(a_position.xy, -0.999, 1.0);
+  gl_Position = vec4(a_position.xy, 0.0, 1.0);
 }
 `
 export const bloom_fs = std + `
 in vec2 v_texcoord;
-uniform vec2 u_resolution;
-uniform sampler2D u_texture;
+uniform sampler2D u_scene;
 
 out vec4 outColor;
-#define W 24.0
+#define W 16.0
 #define SQRT32 0.866025403784
 #define SQUARE(u) u*u
 vec3 tex(ivec2 p) {
-  return SQUARE(texelFetch(u_texture, p, 0).rgb);
+  return SQUARE(texelFetch(u_scene, ivec2(v_texcoord) + p, 0).rgb);
 }
   
 void main() {
-  ivec2 pos = ivec2(v_texcoord);
-  vec3 col = tex(pos) * 0.7;
-  for(float i=-0.75*W; i<0.75*W; i+=4.0){
-    if(i==0.0) continue;
-    float f = exp(-0.5*i*i/W/W) / W; // normal distribution
+  vec3 col = vec3(0);
+  for(float i=-W; i<W; i++){
+    if(i == 0.0) continue;
+    float f = exp(-i*i/W/W) / W; // normal distribution
     col += f * (
-      tex(pos + ivec2( 0.0, i )) +
-      tex(pos + ivec2( SQRT32*i, +0.5*i)) +
-      tex(pos + ivec2( SQRT32*i, -0.5*i))
+      tex(ivec2( 0.0, i )) +
+      tex(ivec2( SQRT32*i, +0.5*i)) +
+      tex(ivec2( SQRT32*i, -0.5*i))
     );
   }
-  outColor = vec4(sqrt(col), 1.0);
+  outColor = vec4(col, 1.0);
+}
+`
+
+export const composit_vs = std + `
+in vec4 a_position;
+uniform vec2 u_resolution;
+out vec2 v_texcoord;
+
+void main() {
+  v_texcoord = (0.5 + 0.5*a_position.xy);
+  gl_Position = vec4(a_position.xy, 0.0, 1.0);
+}
+`
+
+export const composit_fs = std + `
+in vec2 v_texcoord;
+
+uniform sampler2D u_diffraction;
+uniform sampler2D u_scene;
+uniform sampler2D u_bloom;
+
+out vec4 outColor;
+
+void main() {
+  vec4 diffractionCol = texture(u_diffraction, v_texcoord);
+  vec4 sceneCol = texture(u_scene, v_texcoord);
+  vec4 bloomCol = texture(u_bloom, v_texcoord);
+
+  vec3 col = mix(diffractionCol.rgb, sceneCol.rgb, sceneCol.a) + 0.3 * bloomCol.rgb;
+  outColor = vec4(col, 1.0);
 }
 `
