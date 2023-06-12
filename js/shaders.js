@@ -34,6 +34,7 @@ out vec3 v_normal;
 out vec3 v_worldNormal;
 out vec3 v_color;
 out vec3 v_limbColor;
+out float v_radius;
 
 float voronoise(vec3 p)
 {
@@ -68,6 +69,7 @@ void main() {
   v_worldNormal = normalize((a_instancePosition * vec4(a_normal, 0)).xyz);
 
   v_texcoord = a_texcoord;
+  v_radius = a_instanceRadius;
 
   gl_Position = v_position;
 }
@@ -75,6 +77,7 @@ void main() {
 
 export const scene_fs = std + `
 in float v_id;
+in float v_radius;
 in vec4 v_position;
 in vec3 v_color;
 in vec3 v_limbColor;
@@ -98,8 +101,10 @@ float fbm4( vec2 p )
     float f = 0.0;
     f += 0.5000*noise( p + u_time ); p = fbm_mat*p*2.02;
     f += 0.2500*noise( p - u_time ); p = fbm_mat*p*2.03;
-    f += 0.1250*noise( p + u_time ); p = fbm_mat*p*2.01;
-    f += 0.0625*noise( p - u_time );
+    if(v_radius > 0.05) {
+      f += 0.1250*noise( p + u_time ); p = fbm_mat*p*2.01;
+      f += 0.0625*noise( p - u_time );
+    }
     return f/0.9375;
 }
 
@@ -161,12 +166,16 @@ void main() {
   vec3 col = mix(v_limbColor, v_color*mix(1.2, 1.0, noise2), v_worldNormal.z*noise1);
 
   //starspots
-  float starspot_region = 1.0-v_normal.y*v_normal.y; // near equator
-  col *= mix(1.0, 0.3, smoothstep(0.05*starspot_region, 0.0, noise1*noise2));
+  if(v_radius > 0.01) {
+    float starspot_region = 1.0-v_normal.y*v_normal.y; // near equator
+    col *= mix(1.0, 0.3, smoothstep(0.05*starspot_region, 0.0, noise1*noise2));
+  }
 
   // convection cells
-  float noise3 = voronoi_biplanar(v_normal, v_normal*(1e2 + 0.1*(noise1 - noise2)));
-  col *= mix(vec3(1), v_limbColor, noise3);
+  if(v_radius > 0.05) {
+    float noise3 = voronoi_biplanar(v_normal, v_normal*(1e2 + (noise1 - noise2)));
+    col *= mix(vec3(1), v_limbColor, noise3);
+  }
 
   outColor = vec4(col, 1.0);
 }
@@ -214,13 +223,16 @@ float spikes(vec2 p, float r) {
 
 void main() {
   vec3 color = vec3(0);
-  for(int i = 0; i < ${n_stars}; i++) {
+  for(int i = ${n_stars-1}; i >= 0; i--) { // bigger stars first
     Star s = u_stars[i];
     vec2 d = (v_texcoord - s.position) * u_aspect;
+
+    if(s.radius*s.radius > dot(d,d)*1.5 + 0.001) discard; // occluded by star
 
     // diffraction spike
     float fac = 0.0;
     
+
     if(s.radius < 1.0) {
       fac += 0.008 * spikes(0.2*d, s.radius);
     }
