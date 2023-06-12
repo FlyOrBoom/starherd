@@ -1,5 +1,17 @@
 const std = `#version 300 es
-precision lowp float;`
+precision mediump int;
+precision highp float;
+
+#define R32 0.8660254
+#define  PI 3.1415927
+
+vec3 hash33(vec3 p3)
+{
+  p3 = fract(p3 * vec3(.1031, .1030, .0973));
+  p3 += dot(p3, p3.yxz+33.33);
+  return fract((p3.xxy + p3.yxx)*p3.zyx);
+}
+`
 
 export const surface_vs = std + `
 uniform mat4 u_viewProjection;
@@ -19,22 +31,9 @@ out float v_id;
 out vec4 v_position;
 out vec2 v_texcoord;
 out vec3 v_normal;
+out vec3 v_worldNormal;
 out vec3 v_color;
 out vec3 v_limbColor;
-
-#define UI0 1597334673U
-#define UI1 3812015801U
-#define UI2 uvec2(UI0, UI1)
-#define UI3 uvec3(UI0, UI1, 2798796415U)
-#define UI4 uvec4(UI3, 1979697957U)
-#define UIF (1.0 / float(0xffffffffU))
-
-vec3 hash33(vec3 p)
-{
-	uvec3 q = uvec3(ivec3(p)) * UI3;
-	q = (q.x ^ q.y ^ q.z)*UI3;
-	return vec3(q) * UIF;
-}
 
 float voronoise(vec3 p)
 {
@@ -55,17 +54,18 @@ float voronoise(vec3 p)
 
   return a.x/a.y;
 }
+
 void main() {
   v_id = a_instanceID;
   v_color = a_instanceColor;
   v_limbColor = a_instanceLimbColor * a_instanceColor * a_instanceColor;
 
   float radius = a_instanceRadius * (1.0 + 0.1*voronoise(8.0*a_normal + 100.0*v_id));
-  vec4 surfacePosition = vec4(a_normal * radius, 1.0);
-  vec4 worldPosition = a_instancePosition * surfacePosition;
+  vec4 worldPosition = a_instancePosition * vec4(a_normal*radius, 1.0);
   v_position = u_viewProjection * worldPosition;
 
-  v_normal = (a_instancePosition * vec4(a_normal, 0)).xyz;
+  v_normal = normalize(a_normal);
+  v_worldNormal = normalize((a_instancePosition * vec4(a_normal, 0)).xyz);
 
   v_texcoord = a_texcoord;
 
@@ -80,121 +80,93 @@ in vec3 v_color;
 in vec3 v_limbColor;
 in vec2 v_texcoord;
 in vec3 v_normal;
+in vec3 v_worldNormal;
 
 uniform float u_time;
-uniform sampler2D u_diffuse;
 
 out vec4 outColor;
 
-const mat2 m = mat2( 0.80,  0.60, -0.60,  0.80 );
+const mat3 m3 = mat3( 0.10,  0.80,  0.60, -0.80,  0.36, -0.48, -0.60, -0.48,  0.64 );
 
-float noise( in vec2 p )
+vec3 noise( in vec3 x )
 {
-	return sin(p.x)*sin(p.y);
+  vec3 p = floor(x);
+  vec3 f = fract(x);
+  f = f*f*(3.0-2.0*f);
+
+  return mix(  mix(mix( hash33(p+vec3(0,0,0)),
+            hash33(p+vec3(1,0,0)),f.x),
+          mix( hash33(p+vec3(0,1,0)),
+            hash33(p+vec3(1,1,0)),f.x),f.y),
+        mix(mix( hash33(p+vec3(0,0,1)),
+            hash33(p+vec3(1,0,1)),f.x),
+          mix( hash33(p+vec3(0,1,1)),
+            hash33(p+vec3(1,1,1)),f.x),f.y),f.z);
 }
 
-float fbm4( vec2 p )
+vec3 fbm(in vec3 q)
 {
-    float f = 0.0;
-    f += 0.5000*noise( p ); p = m*p*2.02;
-    f += 0.2500*noise( p ); p = m*p*2.03;
-    f += 0.1250*noise( p ); p = m*p*2.01;
-    f += 0.0625*noise( p );
-    return f/0.9375;
-}
-
-float fbm6( vec2 p )
-{
-    float f = 0.0;
-    f += 0.500000*(0.5+0.5*noise( p )); p = m*p*2.02;
-    f += 0.250000*(0.5+0.5*noise( p )); p = m*p*2.03;
-    f += 0.125000*(0.5+0.5*noise( p )); p = m*p*2.01;
-    f += 0.062500*(0.5+0.5*noise( p )); p = m*p*2.04;
-    f += 0.031250*(0.5+0.5*noise( p )); p = m*p*2.01;
-    f += 0.015625*(0.5+0.5*noise( p ));
-    return f/0.96875;
-}
-
-vec2 fbm4_2( vec2 p )
-{
-    return vec2(fbm4(p), fbm4(p+vec2(7.8)));
-}
-
-vec2 fbm6_2( vec2 p )
-{
-    return vec2(fbm6(p+vec2(16.8)), fbm6(p+vec2(11.5)));
+  vec3 f  = 0.5000*noise( q + 0.1*u_time ); q = m3*q*2.01;
+  f += 0.2500*noise( q ); q = m3*q*2.02;
+  f += 0.1250*noise( q ); q = m3*q*2.03;
+  /*f += 0.0625*noise( q );*/ q = m3*q*2.04;
+  f += 0.03125*noise( q ); q = m3*q*2.05;
+  /*f += 0.015625*noise( q );*/ q = m3*q*2.06;
+  f += 0.0078125*noise( q ); q = m3*q*2.07;
+  return vec3(f);
 }
 
 //====================================================================
 
-float func( vec2 q, out vec4 ron )
+float func( vec3 q, out vec4 ron )
 {
-    q += 0.03*sin( vec2(27,23)*u_time + length(q)*vec2(4.1,4.3));
+  q += 0.03*sin(length(q)*vec3(4.1,4.3,4.5));
 
-	vec2 o = fbm4_2( 0.9*q );
+  vec3 o = fbm( 0.9*q );
 
-    o += 0.04*sin( vec2(12,14)*u_time + length(o));
+  o += 0.04*sin(length(o));
 
-    vec2 n = fbm6_2( 3.0*o );
+  vec3 n = fbm( 3.0*o );
 
-	ron = vec4( o, n );
+  ron = vec4( o, n );
 
-    float f = 0.5 + 0.5*fbm4( 1.8*q + 6.0*n );
+  float f = 0.5 + 0.5*length(fbm( 1.8*q + 6.0*n ));
 
-    return mix( f, f*f*f*3.5, f*abs(n.x) );
+  return mix( f, f*f*f*3.5, f*abs(n.x) );
 }
 
-float fbm_layered(vec2 p) {
+float fbm_layered(vec3 p) {
   float e = 2.0;
 
   vec4 on = vec4(0.0);
   float f = func(p, on);
 
-  return smoothstep(0.2, 0.0, f * dot(on.zw,on.zw) * (on.y*on.y));
+  return smoothstep(0.0, 0.2, f * dot(on.zw,on.zw) * (on.y*on.y));
 }
 
-/*
-float hash1( float n ) { return fract(sin(n)*43758.5453); }
-vec2  hash2( vec2  p ) { p = vec2( dot(p,vec2(127.1,311.7)), dot(p,vec2(269.5,183.3)) ); return fract(sin(p)*43758.5453); }
 
-// The parameter w controls the smoothness
-float voronoi( in vec2 x, float w )
-{
-  vec2 n = floor( x );
-  vec2 f = fract( x );
+// https://www.shadertoy.com/view/MdKXDD
 
-  float m = 1.0;
-  for( int j=-2; j<=2; j++ )
-  for( int i=-2; i<=2; i++ )
-  {
-    vec2 g = vec2( float(i),float(j) );
-    vec2 o = hash2( n + g );
+#define vorf dot(fract(p*m3)-.5, fract(p*=m3)-0.5)
 
-    // animate
-    o = 0.5 + 0.5*sin(u_time + 6.2831*o );
-
-    // distance to cell
-    float d = length(g - f + o);
-
-    // do the smooth min for colors and distances
-    float h = smoothstep( -1.0, 1.0, (m-d)/w );
-    m = mix(m, d, h) - h*(1.0-h)*w/(1.0+3.0*w); // distance
-  }
-  return m;
+float voronoi(vec3 p) {
+    return min(min(min(vorf, vorf), vorf), vorf);
 }
-*/
 
 void main() {
-  //vec3 texColor = texture(u_diffuse, v_texcoord*vec2(8,1)).rgb;
-  vec2 uv = v_normal.xy + v_normal.yz;
-  float noise1 = fbm_layered(uv*3.0 + v_id);
-  float noise2 = fbm_layered(uv*vec2(7,19) + v_id);
-  //float noise3 = voronoi(v_texcoord*10.0, 3.0);
+  float noise1 = fbm_layered(v_normal*vec3(3,5,3) + v_id); // dark
+  float noise2 = fbm_layered(v_normal*vec3(7,23,9) + v_id); // light
 
-  vec3 normal = normalize(v_normal);
-  vec3 baseColor = mix(v_limbColor, v_color*mix(1.2, 1.0, noise2),normal.z*noise1);
+  vec3 col = mix(v_limbColor, v_color*mix(1.2, 1.0, noise2), v_worldNormal.z*noise1);
 
-  outColor = vec4(baseColor, 1.0);
+  //starspots
+  float starspot_region = 1.0-v_normal.y*v_normal.y; // near equator
+  col *= mix(1.0, 0.3, smoothstep(0.05*starspot_region, 0.0, noise1*noise2));
+
+  float noise3 = voronoi(v_normal*(1e2 + 0.1*(noise1 - noise2)));
+  col *= mix(vec3(1), v_limbColor, noise3); // convection cells
+
+  outColor = vec4(col, 1.0);
 }
 `
 
@@ -222,9 +194,6 @@ uniform vec2 u_aspect;
 uniform float u_time;
 
 out vec4 outColor;
-
-#define R32 0.8660254
-#define  PI 3.1415927
 
 const mat2 rot1 = mat2(0.5, -R32, R32, 0.5);
 const mat2 rot2 = mat2(0.5, R32, -R32, 0.5);

@@ -66,19 +66,7 @@ twgl.setAttributePrefix("a_")
 
 const starArrays = twgl.primitives.createSphereVertices(0.5, 128, 64)
 
-const tex = twgl.createTexture(gl, {
-  min: gl.NEAREST,
-  mag: gl.NEAREST,
-  src: [
-    255, 255, 255, 255,
-    192, 192, 192, 255,
-    192, 192, 192, 255,
-    255, 255, 255, 255,
-  ],
-});
-
 const uniforms = {
-  u_diffuse: tex,
   u_time: 0,
 }
 const diffractionUniforms = {
@@ -135,7 +123,7 @@ const draw = async (now) => {
     m4.identity(mat)
     m4.translate(mat, [$.bubble.x*aspect[0], $.bubble.y*aspect[1], -16 * $.bubble.r ],mat)
     m4.rotateZ(mat, i*100, mat)
-    m4.rotateY(mat, time * (i%4 - 1.5), mat)
+    m4.rotateY(mat, time * 0.2 * ($.id%6 - 2.5), mat)
 
     instanceIDs.push(i)
     instanceRadii.push($.bubble.r)
