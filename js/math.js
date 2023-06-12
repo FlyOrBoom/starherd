@@ -12,7 +12,7 @@ const max = (a,b) => Math.max(a,b)
 const min = (a,b) => Math.min(a,b)
 const clamp = (a,x,b) => min(max(x,a),b)
 const mix = (a,b) => (x) => a*(1-x) + b*x
-const round = (x) => Math.round(x)
+const round = (x, n) => Number(x).toFixed(n||0)
 const lerp = (x) => (x0, x1) => (v0, v1) =>
   (x < x0) ? v0 : (x > x1) ? v1 : mix(v0, v1)((x-x0)/(x1-x0))
 const check = (x, ...obj) => isFinite(x) || console.error("check:", x, ...obj)
@@ -43,6 +43,7 @@ const L_sun = 3.86e+26 // watts
 const R_sun = 6.9634e+8 // meters
 const Z_sun = 0.02
 const M_chandra = 1.44 // chandrasekhar limit
+const sol = "<sub>⊙</sub>"
 
 
 const classes = {

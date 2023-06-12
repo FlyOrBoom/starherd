@@ -8,25 +8,25 @@ const initial_mass_function = M => (
 
 // Zeta function of metallicity Z
 const phases = {
-  C_MS: { name: "Main sequence below 0.7 M", index: 0, },
-  MS: { name: "Main sequence above 0.7 M", index: 1, },
+  C_MS: { name: "Deeply convective main sequence", index: 0, },
+  MS: { name: "Main sequence", index: 1, },
   HG: { name: "Hertzsprung Gap", index: 2, },
-  GB: { name: "First Giant Branch", index: 3, },
-  CHeB: { name: "Core Helium Burning", index: 4, },
+  GB: { name: "Giant", index: 3, },
+  CHeB: { name: "Core Helium-burning giant", index: 4, },
   EAGB: { 
     index: 5, 
-    name: "Early Asymptotic Giant Branch", 
+    name: "Early asymptotic giant", 
     description: "Extinct H-burning shell surrounding an H-exhausted core, where degenerate CO is beginning to grow."
   },
-  TAPGB: { name: "Thermally Pulsating Asymptotic Giant Branch", index: 6, },
+  TAPGB: { name: "Thermally pulsating asymptotic giant", index: 6, },
   // He_MS: { name: "Naked Helium Star Main Sequence", index: 7, },
   // He_HG: { name: "Naked Helium Star Hertzsprung Gap", index: 8, },
   // He_GB: { name: "Naked Helium Star Giant Branch", index: 9, },
   // He_WD: { name: "Helium White Dwarf", index: 10, },
-  CO_WD: { name: "Carbon/Oxygen White Dwarf", index: 11, },
-  ONe_WD: { name: "Oxygen/Neon White Dwarf", index: 12, },
-  NS: { name: "Neutron Star", index: 13, },
-  BH: { name: "Black Hole", index: 14, },
+  CO_WD: { name: "Carbon/Oxygen white dwarf", index: 11, },
+  ONe_WD: { name: "Oxygen/Neon white dwarf", index: 12, },
+  NS: { name: "Neutron star", index: 13, },
+  BH: { name: "Black hole", index: 14, },
   R: { name: "massless remnant", index: 15, },
 }
 

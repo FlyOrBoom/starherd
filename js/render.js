@@ -572,10 +572,10 @@ const info_update = ($) => {
   $info.innerHTML = [
     "Star " + $.id,
     "Phase: " + $.phase.name,
-    "Temperature: " + round($.bubble.T) + "K", 
-    "Mass: " + round($.bubble.M) + "M⊙", 
-    "Luminosity: " + round($.bubble.L) + "L⊙", 
-    "Radius: " + round($.bubble.R*10)/10 + "R⊙", 
+    "Temperature: " + round($.bubble.T) + " K", 
+    "Mass: " + round($.bubble.M, 2) + " M"+sol, 
+    "Luminosity: " + round($.bubble.L, 2) + " L"+sol, 
+    "Radius: " + round($.bubble.R, 2) + " R"+sol, 
   ].join("<p>")
 
   const X = $.bubble.x > 0
@@ -616,7 +616,7 @@ $board.addEventListener("click", e => {
 
   info_star = stars
     .sort((a, b) => (a.bubble.r - b.bubble.r))
-    .find($ => $.bubble.r > norm([$.bubble.x, $.bubble.y], [x,y]))
+    .find($ => max($.bubble.r, 0.05) > norm([$.bubble.x, $.bubble.y], [x,y]))
   
   if(info_star) {
     $info.style.display = "block"
