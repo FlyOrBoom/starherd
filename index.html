@@ -15,14 +15,19 @@
     <meta property="og:type" content="website">
     <meta property="og:image" content="https://x-ing.space/starherd/render.jpg">
     <meta name="twitter:card" content="summary_large_image">
-    <link rel='shortcut icon' type=image/png href="https://x-ing.space/starherd/favicon.png">
+    <link rel="shortcut icon" type=image/png href="https://x-ing.space/starherd/favicon.png">
+    <script src="js/twgl-full.module.js" type="module"></script>
+    <script src="js/stats.min.js"></script>
+    <script src="js/math.js"></script>
+    <script src="js/shaders.js" type=module></script>
+    <script src="js/crunch.js" type="module"></script>
   </head>
   <body>
     <main id="main">
       <canvas class="screen" id="canvas"></canvas>
       <svg class="screen" id="axes"></svg>
       <div class="screen" id="board">
-        <section id="info"></section>
+        <section id="info">Tap on a star to inspect it!</section>
       </div>
       <form id="controls" autocomplete="off">
         <label title="play/pause">
@@ -33,7 +38,7 @@
         <label title="restart">
           <input id="restart" type="button">
           <svg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960
-                                                 960 960" width="48"><path d="M480-160q-133 0-226.5-93.5T160-480q0-133 93.5-226.5T480-800q85 0 149 34.5T740-671v-99q0-13 8.5-21.5T770-800q13 0 21.5 8.5T800-770v194q0 13-8.5 21.5T770-546H576q-13 0-21.5-8.5T546-576q0-13 8.5-21.5T576-606h138q-38-60-97-97t-137-37q-109 0-184.5 75.5T220-480q0 109 75.5 184.5T480-220q75 0 140-39.5T717-366q5-11 16.5-16.5t22.5-.5q12 5 16 16.5t-1 23.5q-39 84-117.5 133.5T480-160Z" fill="#fff"/></svg>
+                                                          960 960" width="48"><path d="M480-160q-133 0-226.5-93.5T160-480q0-133 93.5-226.5T480-800q85 0 149 34.5T740-671v-99q0-13 8.5-21.5T770-800q13 0 21.5 8.5T800-770v194q0 13-8.5 21.5T770-546H576q-13 0-21.5-8.5T546-576q0-13 8.5-21.5T576-606h138q-38-60-97-97t-137-37q-109 0-184.5 75.5T220-480q0 109 75.5 184.5T480-220q75 0 140-39.5T717-366q5-11 16.5-16.5t22.5-.5q12 5 16 16.5t-1 23.5q-39 84-117.5 133.5T480-160Z" fill="#fff"/></svg>
         </label>
         <label id="time">
           <label>
@@ -56,33 +61,36 @@
           <svg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"><path d="M230-200q-12.75 0-21.375-8.625T200-230v-133q0-12.75 8.675-21.375 8.676-8.625 21.5-8.625 12.825 0 21.325 8.625T260-363v103h103q12.75 0 21.375 8.675 8.625 8.676 8.625 21.5 0 12.825-8.625 21.325T363-200H230Zm-.175-367Q217-567 208.5-575.625T200-597v-133q0-12.75 8.625-21.375T230-760h133q12.75 0 21.375 8.675 8.625 8.676 8.625 21.5 0 12.825-8.625 21.325T363-700H260v103q0 12.75-8.675 21.375-8.676 8.625-21.5 8.625ZM597-200q-12.75 0-21.375-8.675-8.625-8.676-8.625-21.5 0-12.825 8.625-21.325T597-260h103v-103q0-12.75 8.675-21.375 8.676-8.625 21.5-8.625 12.825 0 21.325 8.625T760-363v133q0 12.75-8.625 21.375T730-200H597Zm132.825-367Q717-567 708.5-575.625T700-597v-103H597q-12.75 0-21.375-8.675-8.625-8.676-8.625-21.5 0-12.825 8.625-21.325T597-760h133q12.75 0 21.375 8.625T760-730v133q0 12.75-8.675 21.375-8.676 8.625-21.5 8.625Z" fill="#fff"/></svg>
           <svg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48"><path d="M362.825-200Q350-200 341.5-208.625T333-230v-103H230q-12.75 0-21.375-8.675-8.625-8.676-8.625-21.5 0-12.825 8.625-21.325T230-393h133q12.75 0 21.375 8.625T393-363v133q0 12.75-8.675 21.375-8.676 8.625-21.5 8.625ZM230-567q-12.75 0-21.375-8.675-8.625-8.676-8.625-21.5 0-12.825 8.625-21.325T230-627h103v-103q0-12.75 8.675-21.375 8.676-8.625 21.5-8.625 12.825 0 21.325 8.625T393-730v133q0 12.75-8.625 21.375T363-567H230Zm366.825 367Q584-200 575.5-208.625T567-230v-133q0-12.75 8.625-21.375T597-393h133q12.75 0 21.375 8.675 8.625 8.676 8.625 21.5 0 12.825-8.625 21.325T730-333H627v103q0 12.75-8.675 21.375-8.676 8.625-21.5 8.625ZM597-567q-12.75 0-21.375-8.625T567-597v-133q0-12.75 8.675-21.375 8.676-8.625 21.5-8.625 12.825 0 21.325 8.625T627-730v103h103q12.75 0 21.375 8.675 8.625 8.676 8.625 21.5 0 12.825-8.625 21.325T730-567H597Z" fill="#fff"/></svg>
         </label>
-      </label>
+        </label>
     </main>
     <aside id="aside">
       <h1>Starherd</h1>
       <p>
-      A stellar evolution visualizer by Xing, based on
-      <a href="https://arxiv.org/abs/astro-ph/0001295">"Comprehensive analytic formulae for stellar evolution as a function of mass and metallicity"</a>
+      An interactive Herzsprung&ndash;Russell digram for visualizing stellar
+      evolution, based on
+      <a href="https://arxiv.org/abs/astro-ph/0001295">&ldquo;Comprehensive
+        analytic formulae for stellar evolution as a function of mass and
+        metallicity&rdquo;</a>
       by Hurley, Pols &amp; Tout, and
-      <a href="https://ui.adsabs.harvard.edu/abs/1996MNRAS.281..257T/abstract">"Zero-age main-sequence radii and luminosities as analytic functions of mass and metallicity"</a>
+      <a
+          href="https://ui.adsabs.harvard.edu/abs/1996MNRAS.281..257T/abstract">&ldquo;Zero-age
+          main-sequence radii and luminosities as analytic functions of mass and
+          metallicity&rdquo;</a>
       by Tout, Pols, Eggleton, &amp; Han.
       <p>
-      Read <a href="https://github.com/flyorboom/starherd">my spaghettified
-        code</a> at your own risk.
+      Designed and programmed by
+      <a href="https://x-ing.space">Xing</a> in 2023, with help from the
+      <a href="https://shadertoy.com">Shadertoy</a> community.
+      Read <a href="https://github.com/flyorboom/starherd">my spaghettified code</a> at your own risk.
       <p>
-      Warning: I'm quasi-confident the main sequence through the asymptotic
-      giant phases are accurate, but I'm no astronomer. I have yet to implement 
-      the stellar remnants (white dwarfs, neutron stars, and black holes) 
+      Warning: Although I&rsquo;m quasi-confident about the accuracy of the main sequence through the asymptotic
+      giant phases, I have yet to implement
+      the stellar remnants (white dwarfs, neutron stars, and black holes)
       equations, so any of these occuring should be treated as BS.
       <p>
       <button id="debug">debug button for NERDS</button>
       </p>
     </aside>
-    <script src="js/twgl-full.module.js" type="module"></script>
-    <script src="js/stats.min.js"></script>
-    <script src="js/math.js"></script>
-    <script src="js/shaders.js" type=module></script>
-    <script src="js/crunch.js" type="module"></script>
     <script src="js/render.js" type="module"></script>
   </body>
 </html>

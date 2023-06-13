@@ -5,12 +5,16 @@ precision highp float;
 #define R32 0.8660254
 #define  PI 3.1415927
 
+//--BEGIN Hash without Sine by Dave Hoskins: https://www.shadertoy.com/view/4djSRW
+
 vec3 hash33(vec3 p3)
 {
   p3 = fract(p3 * vec3(.1031, .1030, .0973));
   p3 += dot(p3, p3.yxz+33.33);
   return fract((p3.xxy + p3.yxx)*p3.zyx);
 }
+
+//--END
 `
 
 export const scene_vs = std + `
@@ -36,6 +40,8 @@ out vec3 v_color;
 out vec3 v_limbColor;
 out float v_radius;
 
+//--BEGIN Voronoise by Inigo Quilez: https://www.shadertoy.com/view/Xd23Dh
+
 float voronoise(vec3 p)
 {
   vec3 i = floor(p);
@@ -55,6 +61,8 @@ float voronoise(vec3 p)
 
   return a.x/a.y;
 }
+
+//--END
 
 void main() {
   v_id = a_instanceID;
@@ -89,31 +97,31 @@ uniform float u_time;
 
 out vec4 outColor;
 
+//--BEGIN Warped noise by Inigo Quilez: https://www.shadertoy.com/view/lsl3RH
+
 const mat2 fbm_mat = mat2( 0.80,  0.60, -0.60,  0.80 );
 
 float noise( in vec2 p )
 {
-	return sin(p.x)*sin(p.y);
+  return sin(p.x)*sin(p.y);
 }
 
 float fbm4( vec2 p )
 {
-    float f = 0.0;
-    f += 0.5000*noise( p + u_time ); p = fbm_mat*p*2.02;
-    f += 0.2500*noise( p - u_time ); p = fbm_mat*p*2.03;
-    if(v_radius > 0.05) {
-      f += 0.1250*noise( p + u_time ); p = fbm_mat*p*2.01;
-      f += 0.0625*noise( p - u_time );
-    }
-    return f/0.9375;
+  float f = 0.0;
+  f += 0.5000*noise( p + u_time ); p = fbm_mat*p*2.02;
+  f += 0.2500*noise( p - u_time ); p = fbm_mat*p*2.03;
+  if(v_radius > 0.05) {
+    f += 0.1250*noise( p + u_time ); p = fbm_mat*p*2.01;
+    f += 0.0625*noise( p - u_time );
+  }
+  return f/0.9375;
 }
 
 vec2 fbm4_2( vec2 p )
 {
-    return vec2(fbm4(p), fbm4(p+vec2(7.8)));
+  return vec2(fbm4(p), fbm4(p+vec2(7.8)));
 }
-
-//====================================================================
 
 float func( vec2 q, out vec4 ron )
 {
@@ -141,11 +149,13 @@ float fbm_layered(vec2 p) {
   return smoothstep(0.05, 0.0, f * dot(on.zw,on.zw) * (on.y*on.y));
 }
 
+//--END
+
 float fbm_biplanar(vec3 n, vec3 p) {
   return dot(abs(n.xz), vec2(fbm_layered(p.zy), fbm_layered(p.xy)));
 }
 
-// https://www.shadertoy.com/view/MdKXDD
+//--BEGIN Fake voronoi cell pattern by Shane: https://www.shadertoy.com/view/MdKXDD
 
 const mat2 vor_mat = mat2(.7, -.5, .5, .7);
 #define vorf dot(fract(100.*u_time + (p*vor_mat))-.5, fract(100.*u_time + (p*=vor_mat))-0.5)
@@ -153,6 +163,8 @@ const mat2 vor_mat = mat2(.7, -.5, .5, .7);
 float voronoi(vec2 p) {
     return min(min(vorf, vorf), vorf);
 }
+
+//--END
 
 float voronoi_biplanar(vec3 n, vec3 p) {
   return dot(abs(n.xz), vec2(voronoi(p.zy), voronoi(p.xy)));
