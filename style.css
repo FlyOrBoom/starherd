@@ -75,6 +75,7 @@ a:hover, a:focus {
 }
 #quality-select {
   margin: 0.5rem;
+  width: 3rem;
 }
 #axes, #controls {
   mix-blend-mode: exclusion;

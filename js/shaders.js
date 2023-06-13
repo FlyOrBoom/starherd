@@ -148,7 +148,7 @@ float fbm_biplanar(vec3 n, vec3 p) {
 // https://www.shadertoy.com/view/MdKXDD
 
 const mat2 vor_mat = mat2(.7, -.5, .5, .7);
-#define vorf dot(fract(p*vor_mat)-.5, fract(p*=vor_mat)-0.5)
+#define vorf dot(fract(100.*u_time + (p*vor_mat))-.5, fract(100.*u_time + (p*=vor_mat))-0.5)
 
 float voronoi(vec2 p) {
     return min(min(vorf, vorf), vorf);
@@ -168,12 +168,12 @@ void main() {
   //starspots
   if(v_radius > 0.01) {
     float starspot_region = 1.0-v_normal.y*v_normal.y; // near equator
-    col *= mix(1.0, 0.3, smoothstep(0.05*starspot_region, 0.0, noise1*noise2));
+    col *= mix(1.0, 0.3, smoothstep(0.05*starspot_region, 0.0, min(noise1, noise2)));
   }
 
   // convection cells
   if(v_radius > 0.05) {
-    float noise3 = voronoi_biplanar(v_normal, v_normal*(1e2 + (noise1 - noise2)));
+    float noise3 = voronoi_biplanar(v_normal, v_normal*(1e2 + 2e1*(noise1-noise2)));
     col *= mix(vec3(1), v_limbColor, noise3);
   }
 

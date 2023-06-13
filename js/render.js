@@ -30,14 +30,23 @@ const $time_pause = document.querySelector('#time-pause');
 const $time_slider = document.querySelector('#time-slider');
 const $time_number = document.querySelector('#time-number');
 const $quality_select = document.querySelector('#quality-select');
+const $debug = document.querySelector('#debug');
+
 let pause = false;
 let fullscreen = false;
 let time = 0;
 let then = 0;
 let quality = 2;
+
 const stats = new Stats();
 stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
-$main.append(stats.dom);
+
+let debug = false;
+$debug.onclick = () => { 
+	debug = true; 
+	$main.appendChild(stats.dom); 
+	$debug.parentNode.removeChild($debug) 
+}
 
 // Init
 
@@ -366,7 +375,12 @@ $time_number.addEventListener('input', e => {
 	time = Number.parseFloat(e.target.value); draw_once();
 });
 $quality_select.addEventListener('input', e => {
-	quality = e.target.value; draw_once();
+	quality = e.target.value; 
+
+	twgl.bindFramebufferInfo(gl, bloom.framebufferInfo);
+	gl.clear(gl.COLOR_BUFFER_BIT + gl.DEPTH_BUFFER_BIT);
+
+	draw_once();
 });
 $board.addEventListener('click', e => {
 	const x = 2 * e.x / ww - 1;
