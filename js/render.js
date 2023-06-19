@@ -35,10 +35,12 @@ const $time_number = document.querySelector('#time-number');
 const $quality_select = document.querySelector('#quality-select');
 const $debug = document.querySelector('#debug');
 
+let zoom = 1;
 let speed = 1; // millions of years per second
 let pause = false;
 let fullscreen = false;
 let time = 0;
+let deltaTime = 0;
 let then = 0;
 let quality = 2;
 
@@ -117,9 +119,11 @@ createQuadVAO(composit);
 const draw = async now => {
 	stats.begin();
 	
-	const deltaTime = speed * (now - then) * 1000;
 	if (then && !pause) {
+		deltaTime = speed * (now - then) * 1000;
 		time += deltaTime * 1e-6;
+	} else {
+		deltaTime = 0
 	}
 	const fractTime = 1e3 * fract(1e3*time);
 
@@ -134,8 +138,8 @@ const draw = async now => {
 		const zNear = 0;
 		const zFar = 1000;
 		const projection = m4.ortho(
-			-aspect[0], aspect[0],
-			-aspect[1], aspect[1],
+			-zoom*aspect[0], zoom*aspect[0],
+			-zoom*aspect[1], zoom*aspect[1],
 			zNear, zFar,
 		);
 		const eye = [0, 0, 1];
@@ -153,6 +157,7 @@ const draw = async now => {
 		clock.uniforms.u_fractTime = fractTime
 		clock.uniforms.u_deltaTime = deltaTime;
 
+		diffraction.uniforms.u_zoom = zoom;
 		diffraction.uniforms.u_time = time;
 		diffraction.uniforms.u_fractTime = fractTime;
 		diffraction.uniforms.u_stars = [];
@@ -180,6 +185,8 @@ const draw = async now => {
 				color: v3.multiply($.bubble.color, $.bubble.limbColor),
 			});
 		}
+
+		zoom = clamp(1, mix(zoom, stars[stars.length - 1].bubble.r)(deltaTime*1e-6/speed) || 1, 100) // auto zoom
 
 		Object.assign(starArrays, {
 			instancePosition: {
@@ -408,7 +415,8 @@ $restart.addEventListener('click', e => {
 });
 
 $time_pause.addEventListener('input', e => {
-	pause = e.target.checked; start_draw();
+	pause = e.target.checked; 
+	start_draw();
 });
 
 $time_slider.addEventListener('input', e => {
@@ -426,6 +434,10 @@ $quality_select.addEventListener('input', e => {
 
 	draw_once();
 });
+
+$board.addEventListener('wheel', e => {
+	zoom = clamp(1, zoom * exp(e.wheelDeltaY/300) || 1, 100)
+})
 
 $board.addEventListener('click', e => {
 	const x = 2 * e.x / ww - 1;

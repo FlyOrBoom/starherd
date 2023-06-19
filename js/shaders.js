@@ -222,6 +222,7 @@ struct Star {
 uniform Star u_stars[${n_stars}];
 uniform vec2 u_aspect;
 uniform float u_time;
+uniform float u_zoom;
 uniform float u_fractTime;
 
 out vec4 outColor;
@@ -247,18 +248,19 @@ void main() {
     Star s = u_stars[i];
     vec2 d = (v_texcoord - s.position) * u_aspect;
 
-    if(s.radius*s.radius > dot(d,d)*1.3 + 0.0002) discard; // occluded by star
+    float r = s.radius / u_zoom;
+
+    if(r*r> dot(d,d)*1.3 + 0.0002) discard; // occluded by star
 
     // diffraction spike
     float fac = 0.0;
     
-
-    if(s.radius < 1.0) {
-      fac += 0.008 * spikes(0.2*d, s.radius);
+    if(r < 1.0) {
+      fac += 0.008 * spikes(0.2*d, r);
     }
 
     // corona
-    if(s.radius > 0.1) {
+    if(r > 0.1) {
       float noise = 0.0;
       float theta = atan(d.y, d.x);
       for(int n = 1; n < 256; n+=n)
@@ -266,9 +268,9 @@ void main() {
 	  theta*float(n+i%4)
 	  +float(i)
 	  +(float(n%5) - 2.0)*u_fractTime*1e-3*TAU
-      )*inversesqrt(float(n));
-      noise *= min(1.0, s.radius - 0.1);
-      fac += 0.03*(1.0+0.5*noise)*pow(s.radius/(length(d) - 0.8*s.radius), 2.0);
+	)*inversesqrt(float(n));
+      noise *= min(1.0, r - 0.1);
+      fac += 0.03*(1.0+0.5*noise)*pow(r/(length(d) - 0.8*r), 2.0);
     }
 
     
