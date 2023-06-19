@@ -33,15 +33,16 @@ in float a_instanceRadius;
 in vec3 a_instanceColor;
 in vec3 a_instanceLimbColor;
 in mat4 a_instancePosition;
+in float a_instanceDay;
 
 out float v_id;
 out vec4 v_position;
-out vec2 v_texcoord;
 out vec3 v_normal;
 out vec3 v_worldNormal;
 out vec3 v_color;
 out vec3 v_limbColor;
 out float v_radius;
+out float v_day;
 
 ${include_hash33}
 
@@ -77,12 +78,13 @@ void main() {
   float radius = a_instanceRadius * (1.0 + 0.1*voronoise(8.0*a_normal + 100.0*v_id));
   vec4 worldPosition = a_instancePosition * vec4(a_normal*radius, 1.0);
   v_position = u_viewProjection * worldPosition;
+  v_position.z = a_instanceRadius/100.0;
 
   v_normal = normalize(a_normal);
   v_worldNormal = normalize((a_instancePosition * vec4(a_normal, 0)).xyz);
 
-  v_texcoord = a_texcoord;
   v_radius = a_instanceRadius;
+  v_day = a_instanceDay;
 
   gl_Position = v_position;
 }
@@ -94,9 +96,9 @@ in float v_radius;
 in vec4 v_position;
 in vec3 v_color;
 in vec3 v_limbColor;
-in vec2 v_texcoord;
 in vec3 v_normal;
 in vec3 v_worldNormal;
+in float v_day;
 
 uniform float u_time;
 uniform float u_fractTime;
@@ -115,11 +117,11 @@ float noise( in vec2 p )
 float fbm4( vec2 p )
 {
   float f = 0.0;
-  f += 0.5000*noise( p + u_time ); p = fbm_mat*p*2.02;
-  f += 0.2500*noise( p - u_time*10. ); p = fbm_mat*p*2.03;
+  f += 0.5000*noise( p + u_time/9.0 ); p = fbm_mat*p*2.02;
+  f += 0.2500*noise( p - u_time/3.0 ); p = fbm_mat*p*2.03;
   if(v_radius > 0.05) {
-    f += 0.1250*noise( p + u_time*100. ); p = fbm_mat*p*2.01;
-    f += 0.0625*noise( p - u_time*1000. );
+    f += 0.1250*noise( p + u_time ); p = fbm_mat*p*2.01;
+    f += 0.0625*noise( p - u_time*3. );
   }
   return f/0.9375;
 }
@@ -185,7 +187,7 @@ mat2 rotate2d(float a){
 void main() {
   vec3 normal0 = v_normal;
   vec3 normal1 = v_normal;
-  normal1.xz = rotate2d(-100.*u_time) * v_normal.xz; // differential rotation!
+  normal1.xz = rotate2d(-v_day) * v_normal.xz; // differential rotation!
 
   float stripe = sin(normal0.y*TAU)/8.0/normal0.y + 0.2;
   // texture
@@ -278,6 +280,7 @@ void main() {
     }
 
     // corona
+    float t = u_time;
     if(r > 0.1) {
       float noise = 0.0;
       float theta = atan(d.y, d.x);
@@ -285,9 +288,10 @@ void main() {
 	noise += sin(
 	  theta*float(n+i%4)
 	  +float(i)
-	  +(float(n%5) - 2.0)*u_fractTime*1e-3*TAU
+	  +(float(n%5) - 2.0)*t*TAU
 	)*inversesqrt(float(n));
       noise *= min(1.0, r - 0.1);
+      t *= 10.;
       fac += 0.03*(1.0+0.5*noise)*pow(r/(length(d) - 0.8*r), 2.0);
     }
 

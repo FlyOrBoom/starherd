@@ -165,17 +165,23 @@ const draw = async now => {
 		const instancePositions = new Float32Array(n_stars * 16);
 		const instanceIDs = [];
 		const instanceRadii = [];
-		const instanceColors = []; const instanceLimbColors = [];
+		const instanceColors = []; 
+		const instanceLimbColors = [];
+		const instanceDays = [];
 		for (const [i, $] of stars
 			.sort((a, b) => (a.bubble.r - b.bubble.r)).entries()) {
+
+			$.bubble.day = ($.bubble.day + deltaTime*1e-6/$.bubble.r) % PI;
+
 			const mat = new Float32Array(instancePositions.buffer, i * 16 * 4, 16);
 			m4.identity(mat);
-			m4.translate(mat, [$.bubble.x * aspect[0], $.bubble.y * aspect[1], -16 * $.bubble.r], mat);
+			m4.translate(mat, [$.bubble.x * aspect[0], $.bubble.y * aspect[1], 0], mat);
 			m4.rotateZ(mat, i * 100, mat);
-			m4.rotateY(mat, time * 100, mat);
+			m4.rotateY(mat, $.bubble.day, mat);
 
 			instanceIDs.push(i);
 			instanceRadii.push($.bubble.r);
+			instanceDays.push($.bubble.day);
 			instanceColors.push(...$.bubble.color);
 			instanceLimbColors.push(...$.bubble.limbColor);
 
@@ -202,6 +208,11 @@ const draw = async now => {
 			instanceRadius: {
 				numComponents: 1,
 				data: instanceRadii,
+				divisor: 1,
+			},
+			instanceDay: {
+				numComponents: 1,
+				data: instanceDays,
 				divisor: 1,
 			},
 			instanceColor: {

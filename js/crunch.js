@@ -1069,7 +1069,9 @@ class Star {
       this.Mc.SN = max(M_chandra, 0.773 * this.Mc.BAGB - 0.35)
     }
    
-    this.bubble = {}
+    this.bubble = {
+      day: 0,
+    }
     this.color = ""
   }
 
