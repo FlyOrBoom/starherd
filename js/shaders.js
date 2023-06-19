@@ -363,7 +363,7 @@ void main() {
   vec4 sceneCol = texture(u_scene, v_texcoord);
   vec4 bloomCol = texture(u_bloom, v_texcoord);
 
-  vec3 col = 0.9 * mix(diffractionCol.rgb, sceneCol.rgb, sceneCol.a) + 0.3 * bloomCol.rgb;
+  vec3 col = 0.8 * mix(diffractionCol.rgb, sceneCol.rgb, sceneCol.a) + 0.4 * bloomCol.rgb;
   outColor = vec4(col, 1.0);
 }
 `

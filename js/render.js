@@ -388,8 +388,8 @@ const info_update = $ => {
 	const X = $.bubble.x > 0;
 	const Y = $.bubble.y > 0;
 
-	const x = clamp(0, ($.bubble.x + 1) / 2, 1) * ww;
-	const y = clamp(0, ($.bubble.y + 1) / 2, 1) * wh;
+	const x = clamp(0, ($.bubble.x/zoom + 1) / 2, 1) * ww;
+	const y = clamp(0, ($.bubble.y/zoom + 1) / 2, 1) * wh;
 
 	const x_far = X ? 'left' : 'right';
 	const x_near = X ? 'right' : 'left';
@@ -464,7 +464,7 @@ $board.addEventListener('click', e => {
 
 	info_star = stars
 		.sort((a, b) => (a.bubble.r - b.bubble.r))
-		.find($ => max($.bubble.r, 0.05) > norm([$.bubble.x, $.bubble.y], [x, y]));
+		.find($ => max($.bubble.r, 0.05) > norm([$.bubble.x, $.bubble.y], [zoom*x, zoom*y]));
 
 	$info.style.display = info_star ? 'block' : 'none';
 });
