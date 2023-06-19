@@ -171,13 +171,12 @@ const draw = async now => {
 		for (const [i, $] of stars
 			.sort((a, b) => (a.bubble.r - b.bubble.r)).entries()) {
 
-			$.bubble.day = ($.bubble.day + deltaTime*1e-6/$.bubble.r) % PI;
+			$.bubble.day = ($.bubble.day + deltaTime*1e-6/$.bubble.r) % 100.0;
 
 			const mat = new Float32Array(instancePositions.buffer, i * 16 * 4, 16);
 			m4.identity(mat);
 			m4.translate(mat, [$.bubble.x * aspect[0], $.bubble.y * aspect[1], 0], mat);
 			m4.rotateZ(mat, i * 100, mat);
-			m4.rotateY(mat, $.bubble.day, mat);
 
 			instanceIDs.push(i);
 			instanceRadii.push($.bubble.r);

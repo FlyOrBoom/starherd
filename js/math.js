@@ -31,6 +31,7 @@ const rgb_a = (rgb, a) => "rgb(" + rgb.join(",") + "," + a + ")"
 
 // Constants
 const PI = Math.PI
+const TAU = 2*PI
 const STEFAN = 5.670374419e-8
 const L_sun = 3.86e+26 // watts
 const R_sun = 6.9634e+8 // meters

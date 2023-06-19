@@ -38,10 +38,11 @@ in float a_instanceDay;
 out float v_id;
 out vec4 v_position;
 out vec3 v_normal;
-out vec3 v_worldNormal;
 out vec3 v_color;
 out vec3 v_limbColor;
 out float v_radius;
+out vec2 v_texcoord0;
+out vec2 v_texcoord1;
 out float v_day;
 
 ${include_hash33}
@@ -81,10 +82,11 @@ void main() {
   v_position.z = a_instanceRadius/100.0;
 
   v_normal = normalize(a_normal);
-  v_worldNormal = normalize((a_instancePosition * vec4(a_normal, 0)).xyz);
 
   v_radius = a_instanceRadius;
   v_day = a_instanceDay;
+  v_texcoord0 = a_texcoord - vec2(a_instanceDay, 0);
+  v_texcoord1 = a_texcoord - vec2(2.0*a_instanceDay, 0);
 
   gl_Position = v_position;
 }
@@ -97,8 +99,9 @@ in vec4 v_position;
 in vec3 v_color;
 in vec3 v_limbColor;
 in vec3 v_normal;
-in vec3 v_worldNormal;
 in float v_day;
+in vec2 v_texcoord0;
+in vec2 v_texcoord1;
 
 uniform float u_time;
 uniform float u_fractTime;
@@ -117,11 +120,11 @@ float noise( in vec2 p )
 float fbm4( vec2 p )
 {
   float f = 0.0;
-  f += 0.5000*noise( p + u_time/9.0 ); p = fbm_mat*p*2.02;
-  f += 0.2500*noise( p - u_time/3.0 ); p = fbm_mat*p*2.03;
+  f += 0.5000*noise( p + u_time/25.0 ); p = fbm_mat*p*2.02;
+  f += 0.2500*noise( p - u_time/5.0 ); p = fbm_mat*p*2.03;
   if(v_radius > 0.05) {
     f += 0.1250*noise( p + u_time ); p = fbm_mat*p*2.01;
-    f += 0.0625*noise( p - u_time*3. );
+    f += 0.0625*noise( p - u_time*5. );
   }
   return f/0.9375;
 }
@@ -159,10 +162,6 @@ float fbm_layered(vec2 p) {
 
 //--END
 
-float fbm_biplanar(vec3 n, vec3 p) {
-  return dot(smoothstep(vec2(.1),vec2(.9),abs(n.xz)), vec2(fbm_layered(p.zy), fbm_layered(p.xy)));
-}
-
 //--BEGIN Fake voronoi cell pattern by Shane: https://www.shadertoy.com/view/MdKXDD
 
 const mat2 vor_mat = mat2(.7, -.5, .5, .7);
@@ -175,34 +174,29 @@ float voronoi(vec2 p) {
 
 //--END
 
-float voronoi_biplanar(vec3 n, vec3 p) {
-  return dot(smoothstep(vec2(.1),vec2(.9),abs(n.xz)), vec2(voronoi(p.zy), voronoi(p.xy)));
-}
-
 mat2 rotate2d(float a){
   return mat2(cos(a),-sin(a),
 	      sin(a),cos(a));
 }
 
 void main() {
-  vec3 normal0 = v_normal;
-  vec3 normal1 = v_normal;
-  normal1.xz = rotate2d(-v_day) * v_normal.xz; // differential rotation!
+  vec3 rotNormal = v_normal;
+  rotNormal.xz = rotate2d(-v_day*TAU) * v_normal.xz; // differential rotation!
 
-  float stripe = sin(normal0.y*TAU)/8.0/normal0.y + 0.2;
+  float stripe = 0.5 + 0.5 * cos(v_normal.y*PI);
   // texture
   float noise0 = mix( // light
-    fbm_biplanar(normal0, normal0*vec3(3,5,3) + v_id + vec3(17,0,0)),
-    fbm_biplanar(normal1, normal1*vec3(3,5,3) + v_id + vec3(17,0,0)),
+    fbm_layered(v_texcoord0*vec2(11,13) + v_id),
+    fbm_layered(v_texcoord1*vec2(13,17) + v_id),
     stripe
   );
   float noise1 = mix( // dark
-    fbm_biplanar(normal0, normal0*vec3(5,23,7) + v_id + vec3(19,0,0)),
-    fbm_biplanar(normal1, normal1*vec3(5,23,7) + v_id + vec3(19,0,0)),
+    fbm_layered(v_texcoord0*vec2(23,29) + v_id),
+    fbm_layered(v_texcoord1*vec2(29,31) + v_id),
     stripe
   );
 
-  vec3 col = mix(v_limbColor, v_color*mix(1.2, 1.0, noise1), v_worldNormal.z*noise0);
+  vec3 col = mix(v_limbColor, v_color*mix(1.2, 1.0, noise1), v_normal.z*noise0);
 
   //starspots
   if(v_radius > 0.01) {
@@ -212,7 +206,7 @@ void main() {
 
   // convection cells
   if(v_radius > 0.05) {
-    float noise2 = voronoi_biplanar(v_normal, v_normal*(1e2 + 2e1*(noise0-noise1)));
+    float noise2 = voronoi(v_texcoord0*(1e3 + 2e2*(noise0-noise1)));
     col *= mix(vec3(1), v_limbColor, noise2);
   }
 
