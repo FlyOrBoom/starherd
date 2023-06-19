@@ -158,7 +158,7 @@ float fbm_layered(vec2 p) {
 //--END
 
 float fbm_biplanar(vec3 n, vec3 p) {
-  return dot(abs(n.xz), vec2(fbm_layered(p.zy), fbm_layered(p.xy)));
+  return dot(smoothstep(vec2(.1),vec2(.9),abs(n.xz)), vec2(fbm_layered(p.zy), fbm_layered(p.xy)));
 }
 
 //--BEGIN Fake voronoi cell pattern by Shane: https://www.shadertoy.com/view/MdKXDD
@@ -174,13 +174,13 @@ float voronoi(vec2 p) {
 //--END
 
 float voronoi_biplanar(vec3 n, vec3 p) {
-  return dot(abs(n.xz), vec2(voronoi(p.zy), voronoi(p.xy)));
+  return dot(smoothstep(vec2(.1),vec2(.9),abs(n.xz)), vec2(voronoi(p.zy), voronoi(p.xy)));
 }
 
 void main() {
   // texture
-  float noise1 = fbm_biplanar(v_normal, v_normal*vec3(3,5,3) + v_id); // dark
-  float noise2 = fbm_biplanar(v_normal, v_normal*vec3(5,23,7) + v_id); // light
+  float noise1 = fbm_biplanar(v_normal, v_normal*vec3(3,5,3) + v_id + vec3(17,0,0)); // dark
+  float noise2 = fbm_biplanar(v_normal, v_normal*vec3(5,23,7) + v_id + vec3(19,0,0)); // light
 
   vec3 col = mix(v_limbColor, v_color*mix(1.2, 1.0, noise2), v_worldNormal.z*noise1);
 
