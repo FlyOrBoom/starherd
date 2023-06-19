@@ -6,7 +6,7 @@ import {
 	composit_vs, composit_fs,
 	clock_vs, clock_fs,
 } from './shaders.js';
-import {stars_init, star_update} from './crunch.js';
+import {stars_init} from './crunch.js';
 
 const m4 = twgl.m4;
 const v3 = twgl.v3;
@@ -128,7 +128,7 @@ const draw = async now => {
 	$time_slider.value = log10(1 + time).toFixed(2);
 	$time_number.value = time.toFixed(2);
 
-	await Promise.all(stars.map($ => star_update($, time)));
+	await Promise.all(stars.map($ => $.update(time)));
 
 	{
 		const zNear = 0;
@@ -154,6 +154,7 @@ const draw = async now => {
 		clock.uniforms.u_deltaTime = deltaTime;
 
 		diffraction.uniforms.u_time = time;
+		diffraction.uniforms.u_fractTime = fractTime;
 		diffraction.uniforms.u_stars = [];
 
 		const instancePositions = new Float32Array(n_stars * 16);

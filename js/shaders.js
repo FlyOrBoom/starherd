@@ -222,6 +222,7 @@ struct Star {
 uniform Star u_stars[${n_stars}];
 uniform vec2 u_aspect;
 uniform float u_time;
+uniform float u_fractTime;
 
 out vec4 outColor;
 
@@ -256,7 +257,7 @@ void main() {
       fac += 0.008 * spikes(0.2*d, s.radius);
     }
 
-    // heat glow
+    // corona
     if(s.radius > 0.1) {
       float noise = 0.0;
       float theta = atan(d.y, d.x);
@@ -264,7 +265,7 @@ void main() {
 	noise += sin(
 	  theta*float(n+i%4)
 	  +float(i)
-	  +(float(n%5) - 2.0)*u_time
+	  +(float(n%5) - 2.0)*u_fractTime*1e-3*TAU
       )*inversesqrt(float(n));
       noise *= min(1.0, s.radius - 0.1);
       fac += 0.03*(1.0+0.5*noise)*pow(s.radius/(length(d) - 0.8*s.radius), 2.0);
