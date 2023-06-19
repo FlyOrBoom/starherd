@@ -398,6 +398,11 @@ const info_update = $ => {
 	$info.style['border-' + y_near + '-' + x_near + '-radius'] = 0;
 };
 
+const retime = () => {
+	then = Date.now()
+	deltaTime = 0
+}
+
 window.addEventListener('resize', resize);
 $fullscreen.addEventListener('input', e => {
 	fullscreen = e.target.checked; resize();
@@ -420,9 +425,11 @@ $time_pause.addEventListener('input', e => {
 });
 
 $time_slider.addEventListener('input', e => {
+	if(pause) retime()
 	time = exp10(Number.parseFloat(e.target.value)) - 1; draw_once();
 });
 $time_number.addEventListener('input', e => {
+	if(pause) retime()
 	time = Number.parseFloat(e.target.value); draw_once();
 });
 
@@ -436,7 +443,8 @@ $quality_select.addEventListener('input', e => {
 });
 
 $board.addEventListener('wheel', e => {
-	zoom = clamp(1, zoom * exp(e.wheelDeltaY/300) || 1, 100)
+	zoom = clamp(1, zoom * exp(e.wheelDeltaY/300) || 1, 100);
+	draw_once();
 })
 
 $board.addEventListener('click', e => {

@@ -177,23 +177,41 @@ float voronoi_biplanar(vec3 n, vec3 p) {
   return dot(smoothstep(vec2(.1),vec2(.9),abs(n.xz)), vec2(voronoi(p.zy), voronoi(p.xy)));
 }
 
-void main() {
-  // texture
-  float noise1 = fbm_biplanar(v_normal, v_normal*vec3(3,5,3) + v_id + vec3(17,0,0)); // dark
-  float noise2 = fbm_biplanar(v_normal, v_normal*vec3(5,23,7) + v_id + vec3(19,0,0)); // light
+mat2 rotate2d(float a){
+  return mat2(cos(a),-sin(a),
+	      sin(a),cos(a));
+}
 
-  vec3 col = mix(v_limbColor, v_color*mix(1.2, 1.0, noise2), v_worldNormal.z*noise1);
+void main() {
+  vec3 normal0 = v_normal;
+  vec3 normal1 = v_normal;
+  normal1.xz = rotate2d(-100.*u_time) * v_normal.xz; // differential rotation!
+
+  float stripe = sin(normal0.y*TAU)/8.0/normal0.y + 0.2;
+  // texture
+  float noise0 = mix( // light
+    fbm_biplanar(normal0, normal0*vec3(3,5,3) + v_id + vec3(17,0,0)),
+    fbm_biplanar(normal1, normal1*vec3(3,5,3) + v_id + vec3(17,0,0)),
+    stripe
+  );
+  float noise1 = mix( // dark
+    fbm_biplanar(normal0, normal0*vec3(5,23,7) + v_id + vec3(19,0,0)),
+    fbm_biplanar(normal1, normal1*vec3(5,23,7) + v_id + vec3(19,0,0)),
+    stripe
+  );
+
+  vec3 col = mix(v_limbColor, v_color*mix(1.2, 1.0, noise1), v_worldNormal.z*noise0);
 
   //starspots
   if(v_radius > 0.01) {
     float starspot_region = 1.0-v_normal.y*v_normal.y; // near equator
-    col *= mix(1.0, 0.3, smoothstep(0.05*starspot_region, 0.0, min(noise1, noise2)));
+    col *= mix(1.0, 0.3, smoothstep(0.05*starspot_region, 0.0, min(noise0, noise1)));
   }
 
   // convection cells
   if(v_radius > 0.05) {
-    float noise3 = voronoi_biplanar(v_normal, v_normal*(1e2 + 2e1*(noise1-noise2)));
-    col *= mix(vec3(1), v_limbColor, noise3);
+    float noise2 = voronoi_biplanar(v_normal, v_normal*(1e2 + 2e1*(noise0-noise1)));
+    col *= mix(vec3(1), v_limbColor, noise2);
   }
 
   outColor = vec4(col, 1.0);
