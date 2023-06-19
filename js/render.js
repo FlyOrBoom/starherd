@@ -121,6 +121,7 @@ const draw = async now => {
 	if (then && !pause) {
 		time += deltaTime * 1e-6;
 	}
+	const fractTime = 1e3 * fract(1e3*time);
 
 	then = now;
 
@@ -146,8 +147,10 @@ const draw = async now => {
 
 		scene.uniforms.u_viewProjection = m4.multiply(projection, view);
 		scene.uniforms.u_time = time;
+		scene.uniforms.u_fractTime = fractTime;
+
 		clock.uniforms.u_time = time;
-		clock.uniforms.u_fractTime = 1e3 * fract(1e3*time);
+		clock.uniforms.u_fractTime = fractTime
 		clock.uniforms.u_deltaTime = deltaTime;
 
 		diffraction.uniforms.u_time = time;
@@ -207,8 +210,20 @@ const draw = async now => {
 	}
 
 	if (quality >= 0) {
-		// Draw scene, offscreen if there's additional processing (quality>=1)
+		// offscreen if there's additional processing (quality>=1)
+		twgl.bindFramebufferInfo(gl, (quality >= 1) ? scene.framebufferInfo : null);
+		gl.clear(gl.COLOR_BUFFER_BIT + gl.DEPTH_BUFFER_BIT);
+		gl.enable(gl.CULL_FACE);
+		gl.enable(gl.DEPTH_TEST);
+
+		// Draw clock
+		gl.useProgram(clock.programInfo.program);
+		twgl.setUniforms(clock.programInfo, clock.uniforms);
+		gl.bindVertexArray(clock.screenVAO);
+
+		gl.drawArrays(gl.TRIANGLES, 0, 6);
 	
+		// Draw scene
 		gl.useProgram(scene.programInfo.program);
 
 		const bufferInfo = twgl.createBufferInfoFromArrays(gl, starArrays);
@@ -218,21 +233,9 @@ const draw = async now => {
 		twgl.setBuffersAndAttributes(gl, scene.programInfo, vertexArrayInfo);
 		twgl.setUniforms(scene.programInfo, scene.uniforms);
 
-		twgl.bindFramebufferInfo(gl, (quality >= 1) ? scene.framebufferInfo : null);
-		gl.clear(gl.COLOR_BUFFER_BIT + gl.DEPTH_BUFFER_BIT);
-		gl.enable(gl.CULL_FACE);
-		gl.enable(gl.DEPTH_TEST);
 		twgl.drawBufferInfo(gl, vertexArrayInfo, gl.TRIANGLES, vertexArrayInfo.numelements, 0, n_stars);
 		gl.disable(gl.CULL_FACE);
 		gl.disable(gl.DEPTH_TEST);
-
-		// Draw clock
-		gl.useProgram(clock.programInfo.program);
-		twgl.setBuffersAndAttributes(gl, clock.programInfo, vertexArrayInfo);
-		twgl.setUniforms(clock.programInfo, clock.uniforms);
-		gl.bindVertexArray(clock.screenVAO);
-
-		gl.drawArrays(gl.TRIANGLES, 0, 6);
 	}
 
 	if (quality >= 1) {
@@ -309,8 +312,8 @@ const draw_labels = () => {
 	draw_text({props: {x: 0 + 3 * margin, y: vh - 5 * margin}, text: round(min_bv)});
 	draw_text({props: {x: vw - 3 * margin, y: vh - 5 * margin}, text: round(max_bv)});
 
-	draw_text({props: {x: 0 + margin, y: 0 + 3 * margin}, text: round(min_mag)});
-	draw_text({props: {x: 0 + margin, y: vh - 3 * margin}, text: round(max_mag)});
+	draw_text({props: {x: 0 + margin, y: 0 + 3 * margin}, text: round(max_mag)});
+	draw_text({props: {x: 0 + margin, y: vh - 3 * margin}, text: round(min_mag)});
 
 	draw_text({props: {x: vw - margin, y: 0 + 3 * margin}, text: '10^' + round(log10(max_sol_lum))});
 	draw_text({props: {x: vw - margin, y: vh - 3 * margin}, text: '10^' + round(log10(min_sol_lum))});

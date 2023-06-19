@@ -99,6 +99,7 @@ in vec3 v_normal;
 in vec3 v_worldNormal;
 
 uniform float u_time;
+uniform float u_fractTime;
 
 out vec4 outColor;
 
@@ -115,10 +116,10 @@ float fbm4( vec2 p )
 {
   float f = 0.0;
   f += 0.5000*noise( p + u_time ); p = fbm_mat*p*2.02;
-  f += 0.2500*noise( p - u_time ); p = fbm_mat*p*2.03;
+  f += 0.2500*noise( p - u_time*10. ); p = fbm_mat*p*2.03;
   if(v_radius > 0.05) {
-    f += 0.1250*noise( p + u_time ); p = fbm_mat*p*2.01;
-    f += 0.0625*noise( p - u_time );
+    f += 0.1250*noise( p + u_time*100. ); p = fbm_mat*p*2.01;
+    f += 0.0625*noise( p - u_time*1000. );
   }
   return f/0.9375;
 }
@@ -164,8 +165,7 @@ float fbm_biplanar(vec3 n, vec3 p) {
 
 const mat2 vor_mat = mat2(.7, -.5, .5, .7);
 
-#define vort 100.*sin(100.*u_time)
-#define vorf dot(fract(vort + (p*vor_mat))-.5, fract(vort + (p*=vor_mat))-0.5)
+#define vorf dot(fract(1e-3*u_fractTime + (p*vor_mat))-.5, fract(1e-3*u_fractTime + (p*=vor_mat))-0.5)
 
 float voronoi(vec2 p) {
     return min(min(vorf, vorf), vorf);
@@ -294,7 +294,7 @@ uniform sampler2D u_scene;
 out vec4 outColor;
 #define W 16.0
 #define SQRT32 0.866025403784
-#define SQUARE(u) u*u
+#define SQUARE(u) (u*u*u)
 vec3 tex(ivec2 p) {
   return SQUARE(texelFetch(u_scene, ivec2(v_texcoord) + p, 0).rgb);
 }
@@ -338,7 +338,7 @@ void main() {
   vec4 sceneCol = texture(u_scene, v_texcoord);
   vec4 bloomCol = texture(u_bloom, v_texcoord);
 
-  vec3 col = mix(diffractionCol.rgb, sceneCol.rgb, sceneCol.a) + 0.3 * bloomCol.rgb;
+  vec3 col = 0.9 * mix(diffractionCol.rgb, sceneCol.rgb, sceneCol.a) + 0.3 * bloomCol.rgb;
   outColor = vec4(col, 1.0);
 }
 `
@@ -351,7 +351,7 @@ uniform vec2 u_aspect;
 
 void main() {
   v_texcoord = a_position.xy;
-  gl_Position = vec4(0.15*u_aspect.yx*(a_position.xy + vec2(1.1,1.5)) - 1.0, 0.0, 1.0);
+  gl_Position = vec4(0.15*u_aspect.yx*(a_position.xy + vec2(1.1,1.5)) - 1.0, -0.999, 1.0);
 }
 `
 
@@ -385,6 +385,10 @@ void main() {
     ) + 0.5*smoothstep(0.95, 0.97, r);
 
     for(int i = 0; i < HANDS; i++) {
+        dt /= RATIO;
+        t /= RATIO;
+	if(i == 2) t = u_time * 1e3;
+
         float sharp = 0.02 * pow(2.0, -log2(0.01+dt));
         float j = float(i)/float(HANDS);
         float k = 1.0 - j;
@@ -402,15 +406,11 @@ void main() {
 
 	if(r < k) {
 	  float f = exp(-x*x/2.0)*sharp*(1.0-pow(r/k,4.0));
-	  f += 0.15 * (0.2 + r/k);
+	  f += 0.1 * (0.2 + r/k);
 	  f *= 12.0/float(HANDS);
 	  f = clamp(0.0, 1.0, f);
 	  col += f*normalize(vec3(j, 0.3, 1.0-j));
 	}
-
-        dt /= RATIO;
-        t /= RATIO;
-	if(i == 2) t = u_time * 1e3;
     }
     if(length(col) > 1.0) col = mix(normalize(col), col, 0.5);
 
