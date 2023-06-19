@@ -4,6 +4,7 @@ import {
 	diffraction_vs, diffraction_fs,
 	bloom_vs, bloom_fs,
 	composit_vs, composit_fs,
+	clock_vs, clock_fs,
 } from './shaders.js';
 import {stars_init, star_update} from './crunch.js';
 
@@ -26,12 +27,15 @@ const gl = $canvas.getContext('webgl2');
 
 const $fullscreen = document.querySelector('#fullscreen');
 const $restart = document.querySelector('#restart');
+const $slower = document.querySelector('#slower');
+const $faster = document.querySelector('#faster');
 const $time_pause = document.querySelector('#time-pause');
 const $time_slider = document.querySelector('#time-slider');
 const $time_number = document.querySelector('#time-number');
 const $quality_select = document.querySelector('#quality-select');
 const $debug = document.querySelector('#debug');
 
+let speed = 1; // millions of years per second
 let pause = false;
 let fullscreen = false;
 let time = 0;
@@ -73,6 +77,14 @@ const scene = {
 };
 const starArrays = twgl.primitives.createSphereVertices(0.5, 128, 64); // Instanced spheres VAO
 
+// Clock: clock.
+const clock = {
+	programInfo: twgl.createProgramInfo(gl, [clock_vs, clock_fs]),
+	framebufferInfo: twgl.createFramebufferInfo(gl),
+	uniforms: {},
+};
+createQuadVAO(clock);
+
 // Diffraction: analytic large diffraction spikes; quarter res
 const diffraction = {
 	programInfo: twgl.createProgramInfo(gl, [diffraction_vs, diffraction_fs]),
@@ -104,14 +116,17 @@ createQuadVAO(composit);
 
 const draw = async now => {
 	stats.begin();
-
+	
+	const deltaTime = speed * (now - then) * 1000;
 	if (then && !pause) {
-		time += (now - then) / 1000;
+		time += deltaTime * 1e-6;
 	}
 
 	then = now;
+
 	$time_slider.value = log10(1 + time).toFixed(2);
 	$time_number.value = time.toFixed(2);
+
 	await Promise.all(stars.map($ => star_update($, time)));
 
 	{
@@ -131,6 +146,9 @@ const draw = async now => {
 
 		scene.uniforms.u_viewProjection = m4.multiply(projection, view);
 		scene.uniforms.u_time = time;
+		clock.uniforms.u_time = time;
+		clock.uniforms.u_fractTime = 1e3 * fract(1e3*time);
+		clock.uniforms.u_deltaTime = deltaTime;
 
 		diffraction.uniforms.u_time = time;
 		diffraction.uniforms.u_stars = [];
@@ -138,16 +156,14 @@ const draw = async now => {
 		const instancePositions = new Float32Array(n_stars * 16);
 		const instanceIDs = [];
 		const instanceRadii = [];
-		const instanceColors = [];
-		const instanceLimbColors = [];
-
+		const instanceColors = []; const instanceLimbColors = [];
 		for (const [i, $] of stars
 			.sort((a, b) => (a.bubble.r - b.bubble.r)).entries()) {
 			const mat = new Float32Array(instancePositions.buffer, i * 16 * 4, 16);
 			m4.identity(mat);
 			m4.translate(mat, [$.bubble.x * aspect[0], $.bubble.y * aspect[1], -16 * $.bubble.r], mat);
 			m4.rotateZ(mat, i * 100, mat);
-			m4.rotateY(mat, time * 0.5 * ($.id % 6 - 2.5), mat);
+			m4.rotateY(mat, time * 10 * ($.id % 6 - 2.5), mat);
 
 			instanceIDs.push(i);
 			instanceRadii.push($.bubble.r);
@@ -191,6 +207,8 @@ const draw = async now => {
 	}
 
 	if (quality >= 0) {
+		// Draw scene, offscreen if there's additional processing (quality>=1)
+	
 		gl.useProgram(scene.programInfo.program);
 
 		const bufferInfo = twgl.createBufferInfoFromArrays(gl, starArrays);
@@ -207,6 +225,14 @@ const draw = async now => {
 		twgl.drawBufferInfo(gl, vertexArrayInfo, gl.TRIANGLES, vertexArrayInfo.numelements, 0, n_stars);
 		gl.disable(gl.CULL_FACE);
 		gl.disable(gl.DEPTH_TEST);
+
+		// Draw clock
+		gl.useProgram(clock.programInfo.program);
+		twgl.setBuffersAndAttributes(gl, clock.programInfo, vertexArrayInfo);
+		twgl.setUniforms(clock.programInfo, clock.uniforms);
+		gl.bindVertexArray(clock.screenVAO);
+
+		gl.drawArrays(gl.TRIANGLES, 0, 6);
 	}
 
 	if (quality >= 1) {
@@ -308,8 +334,11 @@ const resize = () => {
 	$aside.style.height = $main.style.height = wh + 'px';
 	$axes.setAttribute('viewBox', '0 0 ' + vw + ' ' + vh);
 
-	diffraction.uniforms.u_aspect = aspect = [sqrt(ww / wh), sqrt(wh / ww)];
 	bloom.uniforms.u_resolution = [vw, vh];
+
+	aspect = [sqrt(ww / wh), sqrt(wh / ww)];
+	diffraction.uniforms.u_aspect = aspect;
+	clock.uniforms.u_aspect = aspect;
 
 	gl.viewport(0, 0, vw, vh);
 	twgl.resizeFramebufferInfo(gl, scene.framebufferInfo);
@@ -362,18 +391,29 @@ window.addEventListener('resize', resize);
 $fullscreen.addEventListener('input', e => {
 	fullscreen = e.target.checked; resize();
 });
+
+$slower.addEventListener('click', e => {
+	speed = max(1e-6, speed/10)
+});
+$faster.addEventListener('click', e => {
+	speed = min(1e+3, speed*10);
+});
+
 $restart.addEventListener('click', e => {
 	time = 0; stars_init(); draw_once();
 });
+
 $time_pause.addEventListener('input', e => {
 	pause = e.target.checked; start_draw();
 });
+
 $time_slider.addEventListener('input', e => {
 	time = exp10(Number.parseFloat(e.target.value)) - 1; draw_once();
 });
 $time_number.addEventListener('input', e => {
 	time = Number.parseFloat(e.target.value); draw_once();
 });
+
 $quality_select.addEventListener('input', e => {
 	quality = e.target.value; 
 
@@ -382,6 +422,7 @@ $quality_select.addEventListener('input', e => {
 
 	draw_once();
 });
+
 $board.addEventListener('click', e => {
 	const x = 2 * e.x / ww - 1;
 	const y = 1 - 2 * e.y / wh;

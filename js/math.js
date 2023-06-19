@@ -12,6 +12,8 @@ const max = (a,b) => Math.max(a,b)
 const min = (a,b) => Math.min(a,b)
 const clamp = (a,x,b) => min(max(x,a),b)
 const mix = (a,b) => (x) => a*(1-x) + b*x
+const floor = (x) => Math.floor(x)
+const fract = (x) => x - floor(x)
 const round = (x, n) => Number(x).toFixed(n||0)
 const lerp = (x) => (x0, x1) => (v0, v1) =>
   (x < x0) ? v0 : (x > x1) ? v1 : mix(v0, v1)((x-x0)/(x1-x0))

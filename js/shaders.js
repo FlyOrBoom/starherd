@@ -4,7 +4,10 @@ precision highp float;
 
 #define R32 0.8660254
 #define  PI 3.1415927
+#define TAU 6.2831853
+`
 
+const include_hash33 = `
 //--BEGIN Hash without Sine by Dave Hoskins: https://www.shadertoy.com/view/4djSRW
 
 vec3 hash33(vec3 p3)
@@ -39,6 +42,8 @@ out vec3 v_worldNormal;
 out vec3 v_color;
 out vec3 v_limbColor;
 out float v_radius;
+
+${include_hash33}
 
 //--BEGIN Voronoise by Inigo Quilez: https://www.shadertoy.com/view/Xd23Dh
 
@@ -158,7 +163,9 @@ float fbm_biplanar(vec3 n, vec3 p) {
 //--BEGIN Fake voronoi cell pattern by Shane: https://www.shadertoy.com/view/MdKXDD
 
 const mat2 vor_mat = mat2(.7, -.5, .5, .7);
-#define vorf dot(fract(100.*u_time + (p*vor_mat))-.5, fract(100.*u_time + (p*=vor_mat))-0.5)
+
+#define vort 100.*sin(100.*u_time)
+#define vorf dot(fract(vort + (p*vor_mat))-.5, fract(vort + (p*=vor_mat))-0.5)
 
 float voronoi(vec2 p) {
     return min(min(vorf, vorf), vorf);
@@ -309,7 +316,6 @@ void main() {
 
 export const composit_vs = std + `
 in vec4 a_position;
-uniform vec2 u_resolution;
 out vec2 v_texcoord;
 
 void main() {
@@ -336,3 +342,77 @@ void main() {
   outColor = vec4(col, 1.0);
 }
 `
+
+export const clock_vs = std + `
+in vec4 a_position;
+out vec2 v_texcoord;
+
+uniform vec2 u_aspect;
+
+void main() {
+  v_texcoord = a_position.xy;
+  gl_Position = vec4(0.15*u_aspect.yx*(a_position.xy + vec2(1.1,1.5)) - 1.0, 0.0, 1.0);
+}
+`
+
+export const clock_fs = std + `
+in vec2 v_texcoord;
+
+uniform float u_time;
+uniform float u_fractTime;
+uniform float u_deltaTime;
+
+#define SPIKE(u) (abs(mod((u) + 0.5, 1.0) - 0.5))
+
+const int HANDS = 12;
+const float RATIO = 10.0;
+
+out vec4 outColor;
+
+void main() {
+    float theta = atan(v_texcoord.x, -v_texcoord.y)/TAU;
+    float r = length(v_texcoord);
+
+    if(r > 1.0) discard;
+
+    float t = u_fractTime;
+    float dt = u_deltaTime;
+
+    vec3 col = vec3(0.7, 0.8, 0.9);
+    col *= smoothstep(0.10, 0.0, abs(r-1.0))*(
+        smoothstep(0.10, 0.0, SPIKE(theta*10.0)) +
+        smoothstep(0.10, 0.0, SPIKE(theta*100.0))
+    ) + 0.5*smoothstep(0.95, 0.97, r);
+
+    for(int i = 0; i < HANDS; i++) {
+        float sharp = 0.02 * pow(2.0, -log2(0.01+dt));
+        float j = float(i)/float(HANDS);
+        float k = 1.0 - j;
+
+        float phi = mod(theta + t - j*0.1, 1.0) - 0.5;
+        bool leading = phi < 0.0;
+
+        phi = abs(phi);
+        //phi *= smoothstep(0.5, 0.0, phi);
+        phi *= leading ? 8.0 : 1.0;
+        float width = j * 3e-2 + 1e-3;
+
+        float x = max(abs(phi)*r - width*(1.0-r/k), 0.0);
+        x *= sharp*100./(leading ? 1.0 : r);
+
+	if(r < k) {
+	  float f = exp(-x*x/2.0)*sharp*(1.0-pow(r/k,4.0));
+	  f += 0.15 * (0.2 + r/k);
+	  f *= 12.0/float(HANDS);
+	  f = clamp(0.0, 1.0, f);
+	  col += f*normalize(vec3(j, 0.3, 1.0-j));
+	}
+
+        dt /= RATIO;
+        t /= RATIO;
+	if(i == 2) t = u_time * 1e3;
+    }
+    if(length(col) > 1.0) col = mix(normalize(col), col, 0.5);
+
+    outColor = vec4(col, 1.0);
+}`
