@@ -355,9 +355,11 @@ out vec4 outColor;
 void main() {
   vec4 diffractionCol = texture(u_diffraction, v_texcoord);
   vec4 sceneCol = texture(u_scene, v_texcoord);
-  vec4 bloomCol = texture(u_bloom, v_texcoord);
 
-  vec3 col = 0.8 * mix(diffractionCol.rgb, sceneCol.rgb, sceneCol.a) + 0.4 * bloomCol.rgb;
+  vec3 bloomCol = texture(u_bloom, v_texcoord).rgb;
+  vec3 mainCol = mix(diffractionCol.rgb, sceneCol.rgb, sceneCol.a); 
+
+  vec3 col = sqrt(0.8*mainCol*mainCol + 0.6*bloomCol*bloomCol);
   outColor = vec4(col, 1.0);
 }
 `

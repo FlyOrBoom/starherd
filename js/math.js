@@ -72,10 +72,10 @@ const temp_to_rgb = (T) => {
   return [red, green, blue].map(c => clamp(0, c/255, 1))
 }
 
-let min_bv = +3, max_bv = -0.5
-let min_temp = bv_to_temp(min_bv), max_temp = bv_to_temp(max_bv)
-let min_mag = +10, max_mag = -20
-let min_sol_lum = abs_mag_to_sol_lum(min_mag), max_sol_lum = abs_mag_to_sol_lum(max_mag)
+let min_bv = -0.5, max_bv = +2.0
+let min_temp = bv_to_temp(max_bv), max_temp = bv_to_temp(min_bv) // smaller B-Vs are bluer and hotter
+let min_mag = -20, max_mag = +10
+let min_sol_lum = abs_mag_to_sol_lum(max_mag), max_sol_lum = abs_mag_to_sol_lum(min_mag)
 
 let min_mass = 0.05, max_mass = 20
 let min_metal = 0.01, max_metal = 0.03

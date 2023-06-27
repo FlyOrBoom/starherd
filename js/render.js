@@ -327,11 +327,11 @@ const draw_labels = () => {
 	draw_text({props: {x: 0 + 3 * margin, y: 0 + margin}, text: round(max_temp)});
 	draw_text({props: {x: vw - 3 * margin, y: 0 + margin}, text: round(min_temp)});
 
-	draw_text({props: {x: 0 + 3 * margin, y: vh - 5 * margin}, text: round(min_bv)});
-	draw_text({props: {x: vw - 3 * margin, y: vh - 5 * margin}, text: round(max_bv)});
+	draw_text({props: {x: 0 + 3 * margin, y: vh - 5 * margin}, text: round(min_bv, 1)});
+	draw_text({props: {x: vw - 3 * margin, y: vh - 5 * margin}, text: round(max_bv, 1)});
 
-	draw_text({props: {x: 0 + margin, y: 0 + 3 * margin}, text: round(max_mag)});
-	draw_text({props: {x: 0 + margin, y: vh - 3 * margin}, text: round(min_mag)});
+	draw_text({props: {x: 0 + margin, y: 0 + 3 * margin}, text: round(min_mag)});
+	draw_text({props: {x: 0 + margin, y: vh - 3 * margin}, text: round(max_mag)});
 
 	draw_text({props: {x: vw - margin, y: 0 + 3 * margin}, text: '10^' + round(log10(max_sol_lum))});
 	draw_text({props: {x: vw - margin, y: vh - 3 * margin}, text: '10^' + round(log10(min_sol_lum))});

@@ -942,9 +942,6 @@ class Star {
     }
     
     // [5.3] Core helium burning
-   
-    
-    
     
     // (H58, H59, H60)
     {
@@ -952,7 +949,7 @@ class Star {
      
       // (H58c)
       // original formulation raised a negative number to a fraction.
-      // merged that part dircetly to H58b to avoid issues
+      // merged that part directly to H58b to avoid NaN issues
       const α_bl = (1 - b45*((this.M.HeF/this.M.FGB)**0.414)) 
       
       // (H58b)
