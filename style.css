@@ -38,6 +38,7 @@ aside {
   bottom: 0;
   right: 0;
   padding: 1rem;
+  overflow-y: scroll;
 }
 a {
   color: #8af;
