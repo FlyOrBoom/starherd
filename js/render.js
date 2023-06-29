@@ -171,7 +171,7 @@ const draw = async now => {
 		for (const [i, $] of stars
 			.sort((a, b) => (a.bubble.r - b.bubble.r)).entries()) {
 
-			$.bubble.day = ($.bubble.day + deltaTime*1e-6/$.bubble.r) % 100.0;
+			$.bubble.day = ($.bubble.day + deltaTime*1e-6/$.bubble.r) % 100.0 || 0.0;
 
 			const mat = new Float32Array(instancePositions.buffer, i * 16 * 4, 16);
 			m4.identity(mat);
